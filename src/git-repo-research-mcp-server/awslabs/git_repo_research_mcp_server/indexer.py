@@ -4,9 +4,9 @@ This module provides functionality for creating and managing FAISS indices
 for Git repositories using LangChain's FAISS implementation.
 """
 
+import faiss
 import json
 import os
-import pickle
 import shutil
 import time
 from awslabs.git_repo_research_mcp_server.embeddings import get_embedding_generator
@@ -26,10 +26,147 @@ from awslabs.git_repo_research_mcp_server.repository import (
 )
 from datetime import datetime
 from git import Repo
+from langchain_community.docstore.in_memory import InMemoryDocstore
 from langchain_community.vectorstores import FAISS
 from langchain_core.documents import Document
 from loguru import logger
 from typing import Any, Dict, List, Optional, Tuple
+
+
+def save_index_without_pickle(vector_store, index_path):
+    """Save FAISS index without using pickle.
+
+    Args:
+        vector_store: FAISS vector store
+        index_path: Path to save the index
+
+    This function saves a FAISS index using FAISS's native methods and JSON
+    instead of pickle for serialization.
+    """
+    os.makedirs(index_path, exist_ok=True)
+
+    # 1. Save FAISS index using faiss's native methods
+    faiss_path = os.path.join(index_path, 'index.faiss')
+    faiss.write_index(vector_store.index, faiss_path)
+
+    # 2. Save docstore as JSON
+    docstore_path = os.path.join(index_path, 'docstore.json')
+    docstore_data = {}
+    for doc_id, doc in vector_store.docstore._dict.items():
+        docstore_data[doc_id] = {'page_content': doc.page_content, 'metadata': doc.metadata}
+
+    with open(docstore_path, 'w') as f:
+        json.dump(docstore_data, f)
+
+    # 3. Save index_to_docstore_id mapping as JSON
+    mapping_path = os.path.join(index_path, 'index_mapping.json')
+    # Convert numeric keys to strings for JSON serialization
+    mapping = {str(k): v for k, v in vector_store.index_to_docstore_id.items()}
+    with open(mapping_path, 'w') as f:
+        json.dump(mapping, f)
+
+
+def load_index_without_pickle(index_path, embedding_function):
+    """Load FAISS index without using pickle.
+
+    Args:
+        index_path: Path to the index
+        embedding_function: Embedding function to use
+
+    Returns:
+        FAISS vector store
+
+    This function loads a FAISS index using FAISS's native methods and JSON
+    instead of pickle for serialization.
+    """
+    # 1. Load FAISS index using faiss's native methods
+    faiss_path = os.path.join(index_path, 'index.faiss')
+    index = faiss.read_index(faiss_path)
+
+    # 2. Load docstore from JSON
+    docstore_path = os.path.join(index_path, 'docstore.json')
+    with open(docstore_path, 'r') as f:
+        docstore_data = json.load(f)
+
+    # Reconstruct the document store
+    docstore = InMemoryDocstore({})
+    for doc_id, doc_data in docstore_data.items():
+        docstore._dict[doc_id] = Document(
+            page_content=doc_data['page_content'], metadata=doc_data['metadata']
+        )
+
+    # 3. Load index_to_docstore_id mapping from JSON
+    mapping_path = os.path.join(index_path, 'index_mapping.json')
+    with open(mapping_path, 'r') as f:
+        mapping_data = json.load(f)
+
+    # Convert string keys back to integers for the mapping
+    index_to_docstore_id = {int(k): v for k, v in mapping_data.items()}
+
+    # 4. Create and return the FAISS vector store
+    return FAISS(
+        embedding_function=embedding_function,
+        index=index,
+        docstore=docstore,
+        index_to_docstore_id=index_to_docstore_id,
+    )
+
+
+def save_chunk_map_without_pickle(chunk_map, index_path):
+    """Save chunk map without using pickle.
+
+    Args:
+        chunk_map: Chunk map to save
+        index_path: Path to save the chunk map
+
+    This function saves a chunk map using JSON instead of pickle for serialization.
+    """
+    # Convert the chunk map to a JSON-serializable format
+    serializable_chunk_map = {'chunks': chunk_map['chunks'], 'chunk_to_file': {}}
+
+    # Convert the chunk_to_file dictionary to a serializable format
+    # Since chunks are not hashable in JSON, we use indices
+    for i, chunk in enumerate(chunk_map['chunks']):
+        if chunk in chunk_map['chunk_to_file']:
+            serializable_chunk_map['chunk_to_file'][str(i)] = chunk_map['chunk_to_file'][chunk]
+
+    # Save as JSON
+    chunk_map_path = os.path.join(index_path, 'chunk_map.json')
+    with open(chunk_map_path, 'w') as f:
+        json.dump(serializable_chunk_map, f)
+
+
+def load_chunk_map_without_pickle(index_path):
+    """Load chunk map without using pickle.
+
+    Args:
+        index_path: Path to the chunk map
+
+    Returns:
+        Chunk map dictionary if found, None otherwise
+
+    This function loads a chunk map using JSON instead of pickle for serialization.
+    """
+    chunk_map_path = os.path.join(index_path, 'chunk_map.json')
+
+    if not os.path.exists(chunk_map_path):
+        return None
+
+    try:
+        with open(chunk_map_path, 'r') as f:
+            serialized_map = json.load(f)
+
+        # Reconstruct the chunk-to-file mapping
+        chunks = serialized_map['chunks']
+        chunk_to_file = {}
+        for i, chunk in enumerate(chunks):
+            if str(i) in serialized_map['chunk_to_file']:
+                chunk_to_file[chunk] = serialized_map['chunk_to_file'][str(i)]
+
+        return {'chunks': chunks, 'chunk_to_file': chunk_to_file}
+    except Exception as e:
+        logger.error(f'Error loading chunk map: {e}')
+        return None
 
 
 class RepositoryIndexer:
@@ -106,7 +243,7 @@ class RepositoryIndexer:
         """
         # Store chunk map file in the repository's index directory
         index_path = self._get_index_path(repository_name)
-        return os.path.join(index_path, 'chunk_map.pkl')
+        return os.path.join(index_path, 'chunk_map.json')
 
     def index_repository(
         self,
@@ -296,36 +433,30 @@ class RepositoryIndexer:
                 f'Vector store created with {len(vector_store.docstore._dict)} documents'  # pyright: ignore[reportAttributeAccessIssue]
             )
 
-            # Save the index
+            # Save the index without pickle
             logger.info(f'Saving index to {index_path}')
             if ctx:
                 ctx.info(f'Saving index to {index_path}')
                 ctx.report_progress(85, 100)  # 85% progress - saving index
 
-            vector_store.save_local(index_path)
+            save_index_without_pickle(vector_store, index_path)
 
             # Verify the saved index
             logger.info('Verifying saved index')
             try:
-                test_store = FAISS.load_local(
-                    index_path, embedding_function, allow_dangerous_deserialization=True
-                )
+                test_store = load_index_without_pickle(index_path, embedding_function)
                 logger.info(
                     f'Loaded index contains {len(test_store.docstore._dict)} documents'  # pyright: ignore[reportAttributeAccessIssue]
                 )
             except Exception as e:
                 logger.error(f'Error verifying saved index: {e}')
 
-            # Save the chunk map for backward compatibility
-            chunk_map_path = self._get_chunk_map_path(repository_name)
-            with open(chunk_map_path, 'wb') as f:
-                pickle.dump(
-                    {
-                        'chunks': chunks,
-                        'chunk_to_file': chunk_to_file,
-                    },
-                    f,
-                )
+            # Save the chunk map without pickle
+            chunk_map_data = {
+                'chunks': chunks,
+                'chunk_to_file': chunk_to_file,
+            }
+            save_chunk_map_without_pickle(chunk_map_data, index_path)
 
             # Get index size by summing up the sizes of all files in the index directory
             index_size = 0
@@ -525,11 +656,8 @@ class RepositoryIndexer:
             logger.info(f'Index directory exists: {index_path}')
             # Check if the index files exist
             index_faiss_path = os.path.join(index_path, 'index.faiss')
-            index_pkl_path = os.path.join(index_path, 'index.pkl')
-            if os.path.exists(index_faiss_path) and os.path.exists(index_pkl_path):
-                logger.info(f'Index files exist: {index_faiss_path} and {index_pkl_path}')
-            else:
-                logger.error(f'Index files not found in {index_path}')
+            if not os.path.exists(index_faiss_path):
+                logger.error(f'FAISS index file not found in {index_path}')
                 return None, None
         else:
             logger.error(f'Index directory not found: {index_path}')
@@ -540,14 +668,12 @@ class RepositoryIndexer:
             return None, None
 
         try:
-            # Load the LangChain FAISS index
+            # Load the LangChain FAISS index without pickle
             embedding_function = self.embedding_generator.bedrock_embeddings
             logger.info(f'Loading FAISS index with embedding function: {embedding_function}')
 
             try:
-                vector_store = FAISS.load_local(
-                    index_path, embedding_function, allow_dangerous_deserialization=True
-                )
+                vector_store = load_index_without_pickle(index_path, embedding_function)
                 logger.info(
                     f'Successfully loaded vector store with {len(vector_store.docstore._dict)} documents'  # pyright: ignore[reportAttributeAccessIssue]
                 )
@@ -561,12 +687,9 @@ class RepositoryIndexer:
                         logger.info(f'  {file_path} ({os.path.getsize(file_path)} bytes)')
                 raise
 
-            # Load the chunk map
-            with open(chunk_map_path, 'rb') as f:
-                chunk_map = pickle.load(f)
-                logger.info(
-                    f'Successfully loaded chunk map with {len(chunk_map["chunks"])} chunks'
-                )
+            # Load the chunk map without pickle
+            chunk_map = load_chunk_map_without_pickle(index_path)
+            logger.info(f'Successfully loaded chunk map with {len(chunk_map["chunks"])} chunks')
 
             # Update the last accessed timestamp in metadata
             metadata_path = self._get_metadata_path(repository_name)
