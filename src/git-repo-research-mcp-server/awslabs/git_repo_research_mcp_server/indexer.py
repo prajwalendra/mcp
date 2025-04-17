@@ -689,6 +689,9 @@ class RepositoryIndexer:
 
             # Load the chunk map without pickle
             chunk_map = load_chunk_map_without_pickle(index_path)
+            if chunk_map is None:
+                logger.error('Failed to load chunk map')
+                return None, None
             logger.info(f'Successfully loaded chunk map with {len(chunk_map["chunks"])} chunks')
 
             # Update the last accessed timestamp in metadata
