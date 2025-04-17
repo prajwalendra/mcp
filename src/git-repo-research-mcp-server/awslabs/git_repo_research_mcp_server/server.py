@@ -578,60 +578,6 @@ async def list_repositories() -> str:
         )
 
 
-@mcp.resource(
-    uri='repositories://{index_directory}',
-    name='Indexed Repositories By Directory',
-    mime_type='application/json',
-)
-async def list_repositories_by_directory(index_directory: str) -> str:
-    """List all indexed repositories from a specific index directory.
-
-    This resource returns a list of all repositories that have been indexed in the specified directory.
-    It provides detailed information about each index including file counts, chunk counts, file types, etc.
-
-    Args:
-        index_directory: Directory to look for indices
-
-    Returns:
-        List of indexed repositories with detailed information
-    """
-    import json
-    from datetime import datetime
-
-    # Custom JSON encoder to handle datetime objects
-    class DateTimeEncoder(json.JSONEncoder):
-        def default(self, o):
-            if isinstance(o, datetime):
-                return o.isoformat()
-            return super().default(o)
-
-    logger.info(f'Listing indexed repositories from directory: {index_directory}')
-
-    try:
-        # List indexed repositories with detailed information
-        response = list_indexed_repositories(
-            index_dir=index_directory,
-            detailed=True,  # Always return detailed information
-        )
-
-        # Add repository directory information to each repository
-        for repo in response.repositories:
-            repo_files_path = os.path.join(repo.index_path, 'repository')
-            if os.path.exists(repo_files_path) and os.path.isdir(repo_files_path):
-                repo.repository_directory = repo_files_path
-
-        # Return the response with custom encoder for datetime objects
-        return json.dumps(response.model_dump(), cls=DateTimeEncoder)
-    except Exception as e:
-        logger.error(f'Error listing indexed repositories: {e}')
-        return json.dumps(
-            {
-                'status': 'error',
-                'message': f'Error listing indexed repositories: {str(e)}',
-            }
-        )
-
-
 async def access_file_or_directory(filepath: str) -> Union[str, List[str], Image]:
     """Access file or directory contents.
 

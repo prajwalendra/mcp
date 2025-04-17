@@ -14,7 +14,6 @@ from awslabs.git_repo_research_mcp_server.models import (
     IndexedRepositoryInfo,
     IndexMetadata,
 )
-from datetime import datetime
 from loguru import logger
 from typing import Dict, List, Optional, Union
 
@@ -168,37 +167,6 @@ def format_size(size_bytes: int) -> str:
         return f'{size_bytes / (1024 * 1024):.2f} MB'
     else:
         return f'{size_bytes / (1024 * 1024 * 1024):.2f} GB'
-
-
-def format_timestamp(timestamp: datetime) -> str:
-    """Format a timestamp to a human-readable string.
-
-    Args:
-        timestamp: Timestamp to format
-
-    Returns:
-        Human-readable string
-    """
-    return timestamp.strftime('%Y-%m-%d %H:%M:%S')
-
-
-def format_duration(milliseconds: int) -> str:
-    """Format a duration in milliseconds to a human-readable string.
-
-    Args:
-        milliseconds: Duration in milliseconds
-
-    Returns:
-        Human-readable string
-    """
-    if milliseconds < 1000:
-        return f'{milliseconds} ms'
-    elif milliseconds < 60 * 1000:
-        return f'{milliseconds / 1000:.2f} s'
-    else:
-        minutes = milliseconds // (60 * 1000)
-        seconds = (milliseconds % (60 * 1000)) / 1000
-        return f'{minutes} min {seconds:.2f} s'
 
 
 def delete_indexed_repository(

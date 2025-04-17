@@ -488,54 +488,6 @@ def process_repository(
     return chunks, chunk_to_file, extension_stats
 
 
-def get_last_commit_id(repo_path: str) -> Optional[str]:
-    """Get the ID of the last commit in a repository.
-
-    Args:
-        repo_path: Path to the repository
-
-    Returns:
-        ID of the last commit, or None if the repository is not a Git repository
-        or if there are no commits
-    """
-    logger.info(f'Getting last commit ID for repository at {repo_path}')
-    try:
-        # Check if the path exists and is a directory
-        if not os.path.exists(repo_path):
-            logger.warning(f'Repository path does not exist: {repo_path}')
-            return None
-
-        if not os.path.isdir(repo_path):
-            logger.warning(f'Repository path is not a directory: {repo_path}')
-            return None
-
-        # Check if .git directory exists
-        git_dir = os.path.join(repo_path, '.git')
-        if not os.path.exists(git_dir):
-            logger.warning(f'.git directory not found at {git_dir}')
-            # List the contents of the directory to debug
-            logger.info(f'Contents of {repo_path}: {os.listdir(repo_path)}')
-            return None
-
-        if not is_git_repo(repo_path):
-            logger.warning(f'Not a Git repository: {repo_path}')
-            return None
-
-        repo = Repo(repo_path)
-        if not repo.heads:
-            logger.warning(f'No commits in repository: {repo_path}')
-            return None
-
-        # Get the last commit
-        last_commit = repo.head.commit
-        logger.info(f'Last commit ID: {last_commit.hexsha}')
-        return last_commit.hexsha
-    except Exception as e:
-        logger.warning(f'Error getting last commit ID: {e}')
-        logger.exception(e)  # Log the full exception traceback
-        return None
-
-
 def cleanup_repository(repo_path: str) -> None:
     """Clean up a cloned repository.
 
