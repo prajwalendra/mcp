@@ -33,6 +33,44 @@ from loguru import logger
 from typing import Any, Dict, List, Optional, Tuple
 
 
+def get_docstore_dict(docstore):
+    """Safely get the document dictionary from a docstore.
+
+    Args:
+        docstore: LangChain docstore object
+
+    Returns:
+        Document dictionary if _dict exists, empty dict otherwise
+    """
+    return docstore._dict if hasattr(docstore, '_dict') else {}
+
+
+def ensure_docstore_dict(docstore):
+    """Ensure the docstore has a _dict attribute.
+
+    Args:
+        docstore: LangChain docstore object
+
+    Returns:
+        The docstore's _dict (creating it if needed)
+    """
+    if not hasattr(docstore, '_dict'):
+        docstore._dict = {}
+    return docstore._dict
+
+
+def get_docstore_dict_size(docstore):
+    """Safely get the size of the document dictionary from a docstore.
+
+    Args:
+        docstore: LangChain docstore object
+
+    Returns:
+        Size of document dictionary if _dict exists, 0 otherwise
+    """
+    return len(get_docstore_dict(docstore))
+
+
 def save_index_without_pickle(vector_store, index_path):
     """Save FAISS index without using pickle.
 
@@ -52,7 +90,7 @@ def save_index_without_pickle(vector_store, index_path):
     # 2. Save docstore as JSON
     docstore_path = os.path.join(index_path, 'docstore.json')
     docstore_data = {}
-    for doc_id, doc in vector_store.docstore._dict.items():
+    for doc_id, doc in get_docstore_dict(vector_store.docstore).items():
         docstore_data[doc_id] = {'page_content': doc.page_content, 'metadata': doc.metadata}
 
     with open(docstore_path, 'w') as f:
@@ -91,7 +129,8 @@ def load_index_without_pickle(index_path, embedding_function):
     # Reconstruct the document store
     docstore = InMemoryDocstore({})
     for doc_id, doc_data in docstore_data.items():
-        docstore._dict[doc_id] = Document(
+        dict_obj = ensure_docstore_dict(docstore)
+        dict_obj[doc_id] = Document(
             page_content=doc_data['page_content'], metadata=doc_data['metadata']
         )
 
@@ -430,7 +469,7 @@ class RepositoryIndexer:
 
             # Debug: Print vector store info
             logger.info(
-                f'Vector store created with {len(vector_store.docstore._dict)} documents'  # pyright: ignore[reportAttributeAccessIssue]
+                f'Vector store created with {get_docstore_dict_size(vector_store.docstore)} documents'
             )
 
             # Save the index without pickle
@@ -446,7 +485,7 @@ class RepositoryIndexer:
             try:
                 test_store = load_index_without_pickle(index_path, embedding_function)
                 logger.info(
-                    f'Loaded index contains {len(test_store.docstore._dict)} documents'  # pyright: ignore[reportAttributeAccessIssue]
+                    f'Loaded index contains {get_docstore_dict_size(test_store.docstore)} documents'
                 )
             except Exception as e:
                 logger.error(f'Error verifying saved index: {e}')
@@ -675,7 +714,7 @@ class RepositoryIndexer:
             try:
                 vector_store = load_index_without_pickle(index_path, embedding_function)
                 logger.info(
-                    f'Successfully loaded vector store with {len(vector_store.docstore._dict)} documents'  # pyright: ignore[reportAttributeAccessIssue]
+                    f'Successfully loaded vector store with {get_docstore_dict_size(vector_store.docstore)} documents'
                 )
             except Exception as e:
                 logger.error(f'Error loading FAISS index: {e}')
