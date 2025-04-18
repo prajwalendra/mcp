@@ -7,7 +7,7 @@ from awslabs.lambda_mcp_server.server import (
     register_lambda_functions,
 )
 from mcp.server.fastmcp import Context, FastMCP
-from unittest.mock import MagicMock, AsyncMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 
 class TestServerIntegration:
