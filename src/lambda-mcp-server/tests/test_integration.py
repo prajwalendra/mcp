@@ -4,6 +4,7 @@ import pytest
 from mcp.server.fastmcp import Context, FastMCP
 from unittest.mock import AsyncMock, MagicMock, patch
 
+
 with pytest.MonkeyPatch().context() as CTX:
     CTX.setattr('boto3.Session', MagicMock)
     from awslabs.lambda_mcp_server.server import (
@@ -11,6 +12,7 @@ with pytest.MonkeyPatch().context() as CTX:
         mcp,
         register_lambda_functions,
     )
+
     class TestServerIntegration:
         """Integration tests for the server module."""
 
@@ -21,7 +23,7 @@ with pytest.MonkeyPatch().context() as CTX:
             assert mcp.name == 'awslabs.lambda-mcp-server'
 
             # Check that the MCP server has instructions
-            assert 'Use AWS Lambda functions' in mcp.instructions
+            assert 'Use AWS Lambda functions' in mcp.instructions if mcp.instructions else ''
 
             # Check that the MCP server has dependencies
             assert 'pydantic' in mcp.dependencies
@@ -79,7 +81,6 @@ with pytest.MonkeyPatch().context() as CTX:
             # Check the result
             assert 'Function test-function returned:' in result
             assert '"result": "success"' in result
-
 
     class TestToolFunctionality:
         """Tests for the functionality of the Lambda tools."""

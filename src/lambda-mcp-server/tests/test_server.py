@@ -6,7 +6,6 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 
 with pytest.MonkeyPatch().context() as CTX:
-    
     CTX.setattr('boto3.Session', MagicMock)
     from awslabs.lambda_mcp_server.server import (
         create_lambda_tool,
@@ -18,7 +17,6 @@ with pytest.MonkeyPatch().context() as CTX:
         sanitize_tool_name,
         validate_function_name,
     )
-
 
     class TestValidateFunctionName:
         """Tests for the validate_function_name function."""
@@ -48,7 +46,6 @@ with pytest.MonkeyPatch().context() as CTX:
             assert validate_function_name('func1') is True
             assert validate_function_name('other-func') is False
 
-
     class TestSanitizeToolName:
         """Tests for the sanitize_tool_name function."""
 
@@ -73,7 +70,6 @@ with pytest.MonkeyPatch().context() as CTX:
             """Test with already valid name."""
             assert sanitize_tool_name('valid_function_name') == 'valid_function_name'
 
-
     class TestFormatLambdaResponse:
         """Tests for the format_lambda_response function."""
 
@@ -96,7 +92,6 @@ with pytest.MonkeyPatch().context() as CTX:
             result = format_lambda_response('test-function', payload)
             assert 'Function test-function returned payload:' in result
 
-
     class TestInvokeLambdaFunctionImpl:
         """Tests for the invoke_lambda_function_impl function."""
 
@@ -105,7 +100,9 @@ with pytest.MonkeyPatch().context() as CTX:
             """Test successful Lambda function invocation."""
             with patch('awslabs.lambda_mcp_server.server.lambda_client', mock_lambda_client):
                 ctx = AsyncMock()
-                result = await invoke_lambda_function_impl('test-function-1', {'param': 'value'}, ctx)
+                result = await invoke_lambda_function_impl(
+                    'test-function-1', {'param': 'value'}, ctx
+                )
 
                 # Check that the Lambda function was invoked with the correct parameters
                 mock_lambda_client.invoke.assert_called_once_with(
@@ -126,7 +123,9 @@ with pytest.MonkeyPatch().context() as CTX:
             """Test Lambda function invocation with error."""
             with patch('awslabs.lambda_mcp_server.server.lambda_client', mock_lambda_client):
                 ctx = AsyncMock()
-                result = await invoke_lambda_function_impl('error-function', {'param': 'value'}, ctx)
+                result = await invoke_lambda_function_impl(
+                    'error-function', {'param': 'value'}, ctx
+                )
 
                 # Check that the context methods were called
                 ctx.info.assert_called()
@@ -140,11 +139,12 @@ with pytest.MonkeyPatch().context() as CTX:
             """Test Lambda function invocation with non-JSON response."""
             with patch('awslabs.lambda_mcp_server.server.lambda_client', mock_lambda_client):
                 ctx = AsyncMock()
-                result = await invoke_lambda_function_impl('test-function-2', {'param': 'value'}, ctx)
+                result = await invoke_lambda_function_impl(
+                    'test-function-2', {'param': 'value'}, ctx
+                )
 
                 # Check the result
                 assert "Function test-function-2 returned payload: b'Non-JSON response'" == result
-
 
     class TestCreateLambdaTool:
         """Tests for the create_lambda_tool function."""
@@ -189,7 +189,6 @@ with pytest.MonkeyPatch().context() as CTX:
             # Check that mcp.tool was called with the correct name (prefix removed)
             mock_mcp.tool.assert_called_once_with(name=function_name.replace('-', '_'))
 
-
     class TestFilterFunctionsByTag:
         """Tests for the filter_functions_by_tag function."""
 
@@ -232,7 +231,9 @@ with pytest.MonkeyPatch().context() as CTX:
                     },
                 ]
 
-                result = filter_functions_by_tag(functions, 'non-existent-key', 'non-existent-value')
+                result = filter_functions_by_tag(
+                    functions, 'non-existent-key', 'non-existent-value'
+                )
 
                 # Should return an empty list
                 assert len(result) == 0
@@ -255,7 +256,6 @@ with pytest.MonkeyPatch().context() as CTX:
 
                 # Should return an empty list
                 assert len(result) == 0
-
 
     class TestRegisterLambdaFunctions:
         """Tests for the register_lambda_functions function."""
@@ -418,7 +418,6 @@ with pytest.MonkeyPatch().context() as CTX:
 
             # Should not raise an exception
             register_lambda_functions()
-
 
     class TestMain:
         """Tests for the main function."""
