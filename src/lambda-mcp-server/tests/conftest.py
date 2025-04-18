@@ -1,9 +1,11 @@
 """Test fixtures for the lambda-mcp-server tests."""
 
 import json
-import os
 import pytest
 from unittest.mock import MagicMock, patch
+
+
+patch('boto3.Session')
 
 
 @pytest.fixture
@@ -85,15 +87,3 @@ def mock_lambda_client():
     mock_client.invoke.side_effect = mock_invoke
 
     return mock_client
-
-# @pytest.fixture
-# def mock_boto3_session():
-#     """Fixture to mock boto3 Session"""
-#     with patch('boto3.Session') as mock_session:
-#         # Create a mock session instance
-#         session_instance = MagicMock()
-#         # Configure the session to return our mock client
-#         session_instance.client.return_value = mock_lambda_client()
-#         # Configure the Session constructor to return our session instance
-#         mock_session.return_value = session_instance
-#         yield mock_session

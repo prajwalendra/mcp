@@ -1,8 +1,6 @@
 """Tests for the server module of the lambda-mcp-server."""
 
-import importlib
 import json
-import os
 import pytest
 from awslabs.lambda_mcp_server.server import (
     create_lambda_tool,
@@ -44,6 +42,7 @@ class TestValidateFunctionName:
         assert validate_function_name('test-function') is True
         assert validate_function_name('func1') is True
         assert validate_function_name('other-func') is False
+
 
 class TestSanitizeToolName:
     """Tests for the sanitize_tool_name function."""
@@ -259,9 +258,7 @@ class TestRegisterLambdaFunctions:
     @patch('awslabs.lambda_mcp_server.server.FUNCTION_PREFIX', 'prefix-')
     # @patch('awslabs.lambda_mcp_server.server.lambda_client')
     @patch('awslabs.lambda_mcp_server.server.create_lambda_tool')
-    def test_register_with_prefix(
-        self, mock_create_lambda_tool, mock_lambda_client
-    ):
+    def test_register_with_prefix(self, mock_create_lambda_tool, mock_lambda_client):
         """Test registering Lambda functions with prefix filter."""
         with patch('awslabs.lambda_mcp_server.server.lambda_client', mock_lambda_client):
             # Call the function
@@ -389,9 +386,7 @@ class TestRegisterLambdaFunctions:
             #     del os.environ['FUNCTION_TAG_VALUE']
 
     @patch('awslabs.lambda_mcp_server.server.create_lambda_tool')
-    def test_register_with_no_filters(
-        self, mock_create_lambda_tool, mock_lambda_client
-    ):
+    def test_register_with_no_filters(self, mock_create_lambda_tool, mock_lambda_client):
         """Test registering Lambda functions with no filters."""
         with patch('awslabs.lambda_mcp_server.server.lambda_client', mock_lambda_client):
             # Call the function
