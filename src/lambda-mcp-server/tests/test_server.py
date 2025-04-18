@@ -1,6 +1,6 @@
 """Tests for the server module of the lambda-mcp-server."""
 
-import awslabs.lambda_mcp_server.server
+import importlib
 import json
 import os
 import pytest
@@ -24,68 +24,35 @@ class TestValidateFunctionName:
         """Test with empty prefix and list."""
         assert validate_function_name('any-function') is True
 
+    @patch('awslabs.lambda_mcp_server.server.FUNCTION_PREFIX', 'test-')
     def test_prefix_match(self):
         """Test with matching prefix."""
-        monkeypatch = pytest.MonkeyPatch()
-        monkeypatch.setattr(
-            awslabs.lambda_mcp_server.server, 'FUNCTION_PREFIX', 'test-', raising=False
-        )
-        monkeypatch.setattr(awslabs.lambda_mcp_server.server, 'FUNCTION_LIST', '', raising=False)
-        try:
-            assert validate_function_name('test-function') is True
-            assert validate_function_name('other-function') is False
-        finally:
-            monkeypatch.delattr(awslabs.lambda_mcp_server.server, 'FUNCTION_PREFIX', raising=False)
-            monkeypatch.delattr(awslabs.lambda_mcp_server.server, 'FUNCTION_LIST', raising=False)
+        assert validate_function_name('test-function') is True
+        assert validate_function_name('other-function') is False
 
+    @patch('awslabs.lambda_mcp_server.server.FUNCTION_LIST', 'func1,func2,func3')
     def test_list_match(self):
         """Test with function in list."""
-        monkeypatch = pytest.MonkeyPatch()
-        monkeypatch.setattr(awslabs.lambda_mcp_server.server, 'FUNCTION_PREFIX', '', raising=False)
-        monkeypatch.setattr(
-            awslabs.lambda_mcp_server.server, 'FUNCTION_LIST', 'func1,func2,func3', raising=False
-        )
-        try:
-            assert validate_function_name('func1') is True
-            assert validate_function_name('func2') is True
-            assert validate_function_name('other-func') is False
-        finally:
-            monkeypatch.delattr(awslabs.lambda_mcp_server.server, 'FUNCTION_PREFIX', raising=False)
-            monkeypatch.delattr(awslabs.lambda_mcp_server.server, 'FUNCTION_LIST', raising=False)
+        assert validate_function_name('func1') is True
+        assert validate_function_name('func2') is True
+        assert validate_function_name('other-func') is False
 
+    @patch('awslabs.lambda_mcp_server.server.FUNCTION_PREFIX', 'test-')
+    @patch('awslabs.lambda_mcp_server.server.FUNCTION_LIST', 'func1,func2')
     def test_prefix_and_list(self):
         """Test with both prefix and list."""
-        monkeypatch = pytest.MonkeyPatch()
-        monkeypatch.setattr(
-            awslabs.lambda_mcp_server.server, 'FUNCTION_PREFIX', 'test-', raising=False
-        )
-        monkeypatch.setattr(
-            awslabs.lambda_mcp_server.server, 'FUNCTION_LIST', 'func1,func2', raising=False
-        )
-        try:
-            assert validate_function_name('test-function') is True
-            assert validate_function_name('func1') is True
-            assert validate_function_name('other-func') is False
-        finally:
-            monkeypatch.delattr(awslabs.lambda_mcp_server.server, 'FUNCTION_PREFIX', raising=False)
-            monkeypatch.delattr(awslabs.lambda_mcp_server.server, 'FUNCTION_LIST', raising=False)
-
+        assert validate_function_name('test-function') is True
+        assert validate_function_name('func1') is True
+        assert validate_function_name('other-func') is False
 
 class TestSanitizeToolName:
     """Tests for the sanitize_tool_name function."""
 
+    @patch('awslabs.lambda_mcp_server.server.FUNCTION_PREFIX', 'prefix-')
+    @patch('awslabs.lambda_mcp_server.server.FUNCTION_LIST', 'func1,func2')
     def test_remove_prefix(self):
         """Test removing prefix from function name."""
-        monkeypatch = pytest.MonkeyPatch()
-        monkeypatch.setattr(
-            awslabs.lambda_mcp_server.server, 'FUNCTION_PREFIX', 'prefix-', raising=False
-        )
-        try:
-            assert sanitize_tool_name('prefix-function') == 'function'
-        finally:
-            monkeypatch.setattr(
-                awslabs.lambda_mcp_server.server, 'FUNCTION_PREFIX', '', raising=False
-            )
+        assert sanitize_tool_name('prefix-function') == 'function'
 
     def test_invalid_characters(self):
         """Test replacing invalid characters."""
@@ -202,6 +169,7 @@ class TestCreateLambdaTool:
         # Check that the function has the correct docstring
         assert decorated_function.__doc__ == description
 
+    @patch('awslabs.lambda_mcp_server.server.FUNCTION_PREFIX', 'test-')
     @patch('awslabs.lambda_mcp_server.server.mcp')
     def test_create_tool_with_prefix(self, mock_mcp):
         """Test creating a Lambda tool with prefix."""
@@ -209,23 +177,13 @@ class TestCreateLambdaTool:
         mock_decorator = MagicMock()
         mock_mcp.tool.return_value = mock_decorator
 
-        # Set environment variable
-        monkeypatch = pytest.MonkeyPatch()
-        monkeypatch.setattr(
-            awslabs.lambda_mcp_server.server, 'FUNCTION_PREFIX', 'test-', raising=False
-        )
-        try:
-            # Call the function
-            function_name = 'prefix-test-function'
-            description = 'Test function description'
-            create_lambda_tool(function_name, description)
+        # Call the function
+        function_name = 'prefix-test-function'
+        description = 'Test function description'
+        create_lambda_tool(function_name, description)
 
-            # Check that mcp.tool was called with the correct name (prefix removed)
-            mock_mcp.tool.assert_called_once_with(name=function_name.replace('-', '_'))
-        finally:
-            monkeypatch.setattr(
-                awslabs.lambda_mcp_server.server, 'FUNCTION_PREFIX', '', raising=False
-            )
+        # Check that mcp.tool was called with the correct name (prefix removed)
+        mock_mcp.tool.assert_called_once_with(name=function_name.replace('-', '_'))
 
 
 class TestFilterFunctionsByTag:
@@ -298,170 +256,137 @@ class TestFilterFunctionsByTag:
 class TestRegisterLambdaFunctions:
     """Tests for the register_lambda_functions function."""
 
+    @patch('awslabs.lambda_mcp_server.server.FUNCTION_PREFIX', 'prefix-')
+    # @patch('awslabs.lambda_mcp_server.server.lambda_client')
     @patch('awslabs.lambda_mcp_server.server.create_lambda_tool')
     def test_register_with_prefix(
         self, mock_create_lambda_tool, mock_lambda_client
     ):
         """Test registering Lambda functions with prefix filter."""
         with patch('awslabs.lambda_mcp_server.server.lambda_client', mock_lambda_client):
-            # Set environment variables
-            monkeypatch = pytest.MonkeyPatch()
-            monkeypatch.setattr(
-                awslabs.lambda_mcp_server.server, 'FUNCTION_PREFIX', 'prefix-', raising=False
-            )
-            monkeypatch.setattr(
-                awslabs.lambda_mcp_server.server, 'FUNCTION_LIST', '', raising=False
-            )
-            monkeypatch.setattr(
-                awslabs.lambda_mcp_server.server, 'FUNCTION_TAG_KEY', '', raising=False
-            )
-            monkeypatch.setattr(
-                awslabs.lambda_mcp_server.server, 'FUNCTION_TAG_VALUE', '', raising=False
+            # Call the function
+            register_lambda_functions()
+
+            # Should only register functions with the prefix
+            assert mock_create_lambda_tool.call_count == 1
+            mock_create_lambda_tool.assert_called_with(
+                'prefix-test-function-3', 'Test function 3 with prefix'
             )
 
-            os.environ['FUNCTION_PREFIX'] = 'prefix-'
-            os.environ['FUNCTION_LIST'] = ''
-            os.environ['FUNCTION_TAG_KEY'] = ''
-            os.environ['FUNCTION_TAG_VALUE'] = ''
-
-            try:
-                # Call the function
-                register_lambda_functions()
-
-                # Should only register functions with the prefix
-                assert mock_create_lambda_tool.call_count == 1
-                mock_create_lambda_tool.assert_called_with(
-                    'prefix-test-function-3', 'Test function 3 with prefix'
-                )
-            finally:
-                # Clean up environment variables
-                monkeypatch.setattr(
-                    awslabs.lambda_mcp_server.server, 'FUNCTION_PREFIX', '', raising=False
-                )
-                monkeypatch.setattr(
-                    awslabs.lambda_mcp_server.server, 'FUNCTION_LIST', '', raising=False
-                )
-                monkeypatch.setattr(
-                    awslabs.lambda_mcp_server.server, 'FUNCTION_TAG_KEY', '', raising=False
-                )
-                monkeypatch.setattr(
-                    awslabs.lambda_mcp_server.server, 'FUNCTION_TAG_VALUE', '', raising=False
-                )
-                del os.environ['FUNCTION_PREFIX']
-                del os.environ['FUNCTION_LIST']
-                del os.environ['FUNCTION_TAG_KEY']
-                del os.environ['FUNCTION_TAG_VALUE']
-
+    @patch('awslabs.lambda_mcp_server.server.FUNCTION_LIST', 'test-function-1,test-function-2')
+    # @patch('awslabs.lambda_mcp_server.server.lambda_client')
     @patch('awslabs.lambda_mcp_server.server.create_lambda_tool')
     def test_register_with_list(self, mock_create_lambda_tool, mock_lambda_client):
         """Test registering Lambda functions with list filter."""
         with patch('awslabs.lambda_mcp_server.server.lambda_client', mock_lambda_client):
             # Set environment variables
-            monkeypatch = pytest.MonkeyPatch()
-            monkeypatch.setattr(
-                awslabs.lambda_mcp_server.server, 'FUNCTION_PREFIX', '', raising=False
-            )
-            monkeypatch.setattr(
-                awslabs.lambda_mcp_server.server,
-                'FUNCTION_LIST',
-                'test-function-1,test-function-2',
-                raising=False,
-            )
-            monkeypatch.setattr(
-                awslabs.lambda_mcp_server.server, 'FUNCTION_TAG_KEY', '', raising=False
-            )
-            monkeypatch.setattr(
-                awslabs.lambda_mcp_server.server, 'FUNCTION_TAG_VALUE', '', raising=False
-            )
-            os.environ['FUNCTION_PREFIX'] = ''
-            os.environ['FUNCTION_LIST'] = 'test-function-1,test-function-2'
-            os.environ['FUNCTION_TAG_KEY'] = ''
-            os.environ['FUNCTION_TAG_VALUE'] = ''
+            # monkeypatch = pytest.MonkeyPatch()
+            # monkeypatch.setattr(
+            #     awslabs.lambda_mcp_server.server, 'FUNCTION_PREFIX', '', raising=False
+            # )
+            # monkeypatch.setattr(
+            #     awslabs.lambda_mcp_server.server,
+            #     'FUNCTION_LIST',
+            #     'test-function-1,test-function-2',
+            #     raising=False,
+            # )
+            # monkeypatch.setattr(
+            #     awslabs.lambda_mcp_server.server, 'FUNCTION_TAG_KEY', '', raising=False
+            # )
+            # monkeypatch.setattr(
+            #     awslabs.lambda_mcp_server.server, 'FUNCTION_TAG_VALUE', '', raising=False
+            # )
+            # os.environ['FUNCTION_PREFIX'] = ''
+            # os.environ['FUNCTION_LIST'] = 'test-function-1,test-function-2'
+            # os.environ['FUNCTION_TAG_KEY'] = ''
+            # os.environ['FUNCTION_TAG_VALUE'] = ''
 
-            try:
-                # Call the function
-                register_lambda_functions()
+            # try:
+            # Call the function
+            register_lambda_functions()
 
-                # Should only register functions in the list
-                assert mock_create_lambda_tool.call_count == 2
-                mock_create_lambda_tool.assert_any_call(
-                    'test-function-1', 'Test function 1 description'
-                )
-                mock_create_lambda_tool.assert_any_call(
-                    'test-function-2', 'Test function 2 description'
-                )
-            finally:
-                # Clean up environment variables
-                monkeypatch.setattr(
-                    awslabs.lambda_mcp_server.server, 'FUNCTION_PREFIX', '', raising=False
-                )
-                monkeypatch.setattr(
-                    awslabs.lambda_mcp_server.server, 'FUNCTION_LIST', '', raising=False
-                )
-                monkeypatch.setattr(
-                    awslabs.lambda_mcp_server.server, 'FUNCTION_TAG_KEY', '', raising=False
-                )
-                monkeypatch.setattr(
-                    awslabs.lambda_mcp_server.server, 'FUNCTION_TAG_VALUE', '', raising=False
-                )
-                del os.environ['FUNCTION_PREFIX']
-                del os.environ['FUNCTION_LIST']
-                del os.environ['FUNCTION_TAG_KEY']
-                del os.environ['FUNCTION_TAG_VALUE']
+            # Should only register functions in the list
+            assert mock_create_lambda_tool.call_count == 2
+            mock_create_lambda_tool.assert_any_call(
+                'test-function-1', 'Test function 1 description'
+            )
+            mock_create_lambda_tool.assert_any_call(
+                'test-function-2', 'Test function 2 description'
+            )
+            # finally:
+            #     # Clean up environment variables
+            #     monkeypatch.setattr(
+            #         awslabs.lambda_mcp_server.server, 'FUNCTION_PREFIX', '', raising=False
+            #     )
+            #     monkeypatch.setattr(
+            #         awslabs.lambda_mcp_server.server, 'FUNCTION_LIST', '', raising=False
+            #     )
+            #     monkeypatch.setattr(
+            #         awslabs.lambda_mcp_server.server, 'FUNCTION_TAG_KEY', '', raising=False
+            #     )
+            #     monkeypatch.setattr(
+            #         awslabs.lambda_mcp_server.server, 'FUNCTION_TAG_VALUE', '', raising=False
+            #     )
+            #     del os.environ['FUNCTION_PREFIX']
+            #     del os.environ['FUNCTION_LIST']
+            #     del os.environ['FUNCTION_TAG_KEY']
+            #     del os.environ['FUNCTION_TAG_VALUE']
 
+    @patch('awslabs.lambda_mcp_server.server.FUNCTION_TAG_KEY', 'test-key')
+    @patch('awslabs.lambda_mcp_server.server.FUNCTION_TAG_VALUE', 'test-value')
     @patch('awslabs.lambda_mcp_server.server.create_lambda_tool')
     def test_register_with_tags(self, mock_create_lambda_tool, mock_lambda_client):
         """Test registering Lambda functions with tag filter."""
         with patch('awslabs.lambda_mcp_server.server.lambda_client', mock_lambda_client):
             # Set environment variables
-            monkeypatch = pytest.MonkeyPatch()
-            monkeypatch.setattr(
-                awslabs.lambda_mcp_server.server, 'FUNCTION_PREFIX', '', raising=False
-            )
-            monkeypatch.setattr(
-                awslabs.lambda_mcp_server.server, 'FUNCTION_LIST', '', raising=False
-            )
-            monkeypatch.setattr(
-                awslabs.lambda_mcp_server.server, 'FUNCTION_TAG_KEY', 'test-key', raising=False
-            )
-            monkeypatch.setattr(
-                awslabs.lambda_mcp_server.server, 'FUNCTION_TAG_VALUE', 'test-value', raising=False
-            )
-            os.environ['FUNCTION_PREFIX'] = ''
-            os.environ['FUNCTION_LIST'] = ''
-            os.environ['FUNCTION_TAG_KEY'] = 'test-key'
-            os.environ['FUNCTION_TAG_VALUE'] = 'test-value'
+            # monkeypatch = pytest.MonkeyPatch()
+            # monkeypatch.setattr(
+            #     awslabs.lambda_mcp_server.server, 'FUNCTION_PREFIX', '', raising=False
+            # )
+            # monkeypatch.setattr(
+            #     awslabs.lambda_mcp_server.server, 'FUNCTION_LIST', '', raising=False
+            # )
+            # monkeypatch.setattr(
+            #     awslabs.lambda_mcp_server.server, 'FUNCTION_TAG_KEY', 'test-key', raising=False
+            # )
+            # monkeypatch.setattr(
+            #     awslabs.lambda_mcp_server.server, 'FUNCTION_TAG_VALUE', 'test-value', raising=False
+            # )
+            # os.environ['FUNCTION_PREFIX'] = ''
+            # os.environ['FUNCTION_LIST'] = ''
+            # os.environ['FUNCTION_TAG_KEY'] = 'test-key'
+            # os.environ['FUNCTION_TAG_VALUE'] = 'test-value'
 
-            try:
-                # Call the function
-                register_lambda_functions()
+            # try:
+            # Call the function
+            register_lambda_functions()
 
-                # Should only register functions with the matching tag
-                assert mock_create_lambda_tool.call_count == 2
-                mock_create_lambda_tool.assert_any_call(
-                    'test-function-1', 'Test function 1 description'
-                )
-                mock_create_lambda_tool.assert_any_call(
-                    'prefix-test-function-3', 'Test function 3 with prefix'
-                )
-            finally:
-                # Clean up environment variables
-                monkeypatch.setattr(
-                    awslabs.lambda_mcp_server.server, 'FUNCTION_PREFIX', '', raising=False
-                )
-                monkeypatch.setattr(
-                    awslabs.lambda_mcp_server.server, 'FUNCTION_LIST', '', raising=False
-                )
-                monkeypatch.setattr(
-                    awslabs.lambda_mcp_server.server, 'FUNCTION_TAG_KEY', '', raising=False
-                )
-                monkeypatch.setattr(
-                    awslabs.lambda_mcp_server.server, 'FUNCTION_TAG_VALUE', '', raising=False
-                )
-                del os.environ['FUNCTION_PREFIX']
-                del os.environ['FUNCTION_LIST']
-                del os.environ['FUNCTION_TAG_KEY']
-                del os.environ['FUNCTION_TAG_VALUE']
+            # Should only register functions with the matching tag
+            assert mock_create_lambda_tool.call_count == 2
+            mock_create_lambda_tool.assert_any_call(
+                'test-function-1', 'Test function 1 description'
+            )
+            mock_create_lambda_tool.assert_any_call(
+                'prefix-test-function-3', 'Test function 3 with prefix'
+            )
+            # finally:
+            #     # Clean up environment variables
+            #     monkeypatch.setattr(
+            #         awslabs.lambda_mcp_server.server, 'FUNCTION_PREFIX', '', raising=False
+            #     )
+            #     monkeypatch.setattr(
+            #         awslabs.lambda_mcp_server.server, 'FUNCTION_LIST', '', raising=False
+            #     )
+            #     monkeypatch.setattr(
+            #         awslabs.lambda_mcp_server.server, 'FUNCTION_TAG_KEY', '', raising=False
+            #     )
+            #     monkeypatch.setattr(
+            #         awslabs.lambda_mcp_server.server, 'FUNCTION_TAG_VALUE', '', raising=False
+            #     )
+            #     del os.environ['FUNCTION_PREFIX']
+            #     del os.environ['FUNCTION_LIST']
+            #     del os.environ['FUNCTION_TAG_KEY']
+            #     del os.environ['FUNCTION_TAG_VALUE']
 
     @patch('awslabs.lambda_mcp_server.server.create_lambda_tool')
     def test_register_with_no_filters(
