@@ -300,7 +300,7 @@ class TestRegisterLambdaFunctions:
 
     @patch('awslabs.lambda_mcp_server.server.create_lambda_tool')
     def test_register_with_prefix(
-        self, mock_create_lambda_tool, mock_lambda_client, mock_env_vars
+        self, mock_create_lambda_tool, mock_lambda_client
     ):
         """Test registering Lambda functions with prefix filter."""
         with patch('awslabs.lambda_mcp_server.server.lambda_client', mock_lambda_client):
@@ -353,7 +353,7 @@ class TestRegisterLambdaFunctions:
                 del os.environ['FUNCTION_TAG_VALUE']
 
     @patch('awslabs.lambda_mcp_server.server.create_lambda_tool')
-    def test_register_with_list(self, mock_create_lambda_tool, mock_lambda_client, mock_env_vars):
+    def test_register_with_list(self, mock_create_lambda_tool, mock_lambda_client):
         """Test registering Lambda functions with list filter."""
         with patch('awslabs.lambda_mcp_server.server.lambda_client', mock_lambda_client):
             # Set environment variables
@@ -410,7 +410,7 @@ class TestRegisterLambdaFunctions:
                 del os.environ['FUNCTION_TAG_VALUE']
 
     @patch('awslabs.lambda_mcp_server.server.create_lambda_tool')
-    def test_register_with_tags(self, mock_create_lambda_tool, mock_lambda_client, mock_env_vars):
+    def test_register_with_tags(self, mock_create_lambda_tool, mock_lambda_client):
         """Test registering Lambda functions with tag filter."""
         with patch('awslabs.lambda_mcp_server.server.lambda_client', mock_lambda_client):
             # Set environment variables
@@ -465,7 +465,7 @@ class TestRegisterLambdaFunctions:
 
     @patch('awslabs.lambda_mcp_server.server.create_lambda_tool')
     def test_register_with_no_filters(
-        self, mock_create_lambda_tool, mock_lambda_client, clear_env_vars
+        self, mock_create_lambda_tool, mock_lambda_client
     ):
         """Test registering Lambda functions with no filters."""
         with patch('awslabs.lambda_mcp_server.server.lambda_client', mock_lambda_client):

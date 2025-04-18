@@ -3,7 +3,7 @@
 import json
 import os
 import pytest
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 
 @pytest.fixture
@@ -86,73 +86,14 @@ def mock_lambda_client():
 
     return mock_client
 
-
 @pytest.fixture
-def mock_env_vars():
-    """Set up and tear down environment variables for testing."""
-    # Save original environment variables
-    original_env = {}
-    env_vars = [
-        'AWS_PROFILE',
-        'AWS_REGION',
-        'FUNCTION_PREFIX',
-        'FUNCTION_LIST',
-        'FUNCTION_TAG_KEY',
-        'FUNCTION_TAG_VALUE',
-    ]
-
-    for var in env_vars:
-        if var in os.environ:
-            original_env[var] = os.environ[var]
-        else:
-            original_env[var] = None
-
-    # Set test environment variables
-    os.environ['AWS_PROFILE'] = 'test-profile'
-    os.environ['AWS_REGION'] = 'us-east-1'
-    os.environ['FUNCTION_PREFIX'] = 'prefix-'
-    os.environ['FUNCTION_LIST'] = 'test-function-1,test-function-2'
-    os.environ['FUNCTION_TAG_KEY'] = 'test-key'
-    os.environ['FUNCTION_TAG_VALUE'] = 'test-value'
-
-    yield
-
-    # Restore original environment variables
-    for var in env_vars:
-        if original_env[var] is not None:
-            os.environ[var] = original_env[var]
-        elif var in os.environ:
-            del os.environ[var]
-
-
-@pytest.fixture
-def clear_env_vars():
-    """Clear environment variables for testing."""
-    # Save original environment variables
-    original_env = {}
-    env_vars = [
-        'AWS_PROFILE',
-        'AWS_REGION',
-        'FUNCTION_PREFIX',
-        'FUNCTION_LIST',
-        'FUNCTION_TAG_KEY',
-        'FUNCTION_TAG_VALUE',
-    ]
-
-    for var in env_vars:
-        if var in os.environ:
-            original_env[var] = os.environ[var]
-        else:
-            original_env[var] = None
-
-    # Clear test environment variables
-    for var in env_vars:
-        if var in os.environ:
-            del os.environ[var]
-
-    yield
-
-    # Restore original environment variables
-    for var in env_vars:
-        if original_env[var] is not None:
-            os.environ[var] = original_env[var]
+def mock_boto3_session():
+    """Fixture to mock boto3 Session"""
+    with patch('boto3.Session') as mock_session:
+        # Create a mock session instance
+        session_instance = MagicMock()
+        # Configure the session to return our mock client
+        session_instance.client.return_value = MagicMock()
+        # Configure the Session constructor to return our session instance
+        mock_session.return_value = session_instance
+        yield mock_session

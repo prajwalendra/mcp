@@ -26,9 +26,10 @@ class TestServerIntegration:
         assert 'pydantic' in mcp.dependencies
         assert 'boto3' in mcp.dependencies
 
+
     @patch('awslabs.lambda_mcp_server.server.create_lambda_tool')
     @patch('awslabs.lambda_mcp_server.server.lambda_client')
-    def test_tool_registration(self, mock_lambda_client, mock_create_lambda_tool, mock_env_vars):
+    def test_tool_registration(self, mock_lambda_client, mock_create_lambda_tool):
         """Test that Lambda functions are registered as tools."""
         # Set up the mock
         mock_lambda_client.list_functions.return_value = {
