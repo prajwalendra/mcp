@@ -36,7 +36,7 @@ class TestFormatLambdaResponseCoverage:
             assert False, "Should have raised UnicodeDecodeError"
         except UnicodeDecodeError:
             # Now test our function with this payload
-            assert invalid_json not None
+            assert invalid_json is not None
             result = format_lambda_response('test-function', invalid_json)
             assert 'Function test-function returned payload:' in result
             assert str(invalid_json) in result
