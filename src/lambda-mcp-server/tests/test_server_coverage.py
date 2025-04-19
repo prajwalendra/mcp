@@ -28,6 +28,7 @@ class TestFormatLambdaResponseCoverage:
         """Test with payload that causes UnicodeDecodeError."""
         # Create a binary payload that will cause UnicodeDecodeError when trying to decode as JSON
         # This specifically targets line 120 in server.py
+        invalid_json = None
         try:
             # Force a UnicodeDecodeError by creating invalid UTF-8 and trying to decode it
             invalid_json = b'{"key": "\x80\x81\x82\x83"}'
@@ -35,6 +36,7 @@ class TestFormatLambdaResponseCoverage:
             assert False, "Should have raised UnicodeDecodeError"
         except UnicodeDecodeError:
             # Now test our function with this payload
+            assert invalid_json not None
             result = format_lambda_response('test-function', invalid_json)
             assert 'Function test-function returned payload:' in result
             assert str(invalid_json) in result
