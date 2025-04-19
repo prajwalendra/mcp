@@ -10,8 +10,6 @@ with pytest.MonkeyPatch().context() as CTX:
     CTX.setattr('boto3.Session', MagicMock)
     from awslabs.lambda_mcp_server.server import (
         invoke_lambda_function_impl,
-        mcp,
-        register_lambda_functions,
     )
 
 
@@ -84,20 +82,17 @@ class TestToolFunctionalityCoverage:
         """Test the Lambda function with complex JSON response."""
         # Set up the mock with complex nested JSON
         complex_json = {
-            "data": {
-                "nested": {
-                    "array": [1, 2, 3],
-                    "object": {"key": "value"},
-                    "null": None,
-                    "boolean": True
+            'data': {
+                'nested': {
+                    'array': [1, 2, 3],
+                    'object': {'key': 'value'},
+                    'null': None,
+                    'boolean': True,
                 }
             },
-            "metadata": {
-                "timestamp": "2023-01-01T00:00:00Z",
-                "requestId": "12345"
-            }
+            'metadata': {'timestamp': '2023-01-01T00:00:00Z', 'requestId': '12345'},
         }
-        
+
         mock_payload = MagicMock()
         mock_payload.read.return_value = json.dumps(complex_json).encode()
         mock_lambda_client.invoke.return_value = {

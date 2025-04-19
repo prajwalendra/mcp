@@ -1,8 +1,7 @@
 """Additional tests specifically targeting remaining uncovered lines in the server module."""
 
-import os
-import pytest
 import logging
+import pytest
 from unittest.mock import MagicMock, patch
 
 
@@ -16,10 +15,13 @@ with pytest.MonkeyPatch().context() as CTX:
 class TestRegisterLambdaFunctionsAdditionalCoverage:
     """Additional tests specifically for the register_lambda_functions function."""
 
-    @patch('os.environ', {
-        'FUNCTION_TAG_KEY': 'test-key',
-        'FUNCTION_TAG_VALUE': '',
-    })
+    @patch(
+        'os.environ',
+        {
+            'FUNCTION_TAG_KEY': 'test-key',
+            'FUNCTION_TAG_VALUE': '',
+        },
+    )
     @patch('awslabs.lambda_mcp_server.server.FUNCTION_TAG_KEY', 'test-key')
     @patch('awslabs.lambda_mcp_server.server.FUNCTION_TAG_VALUE', '')
     def test_register_with_incomplete_tag_config_direct_env(self, mock_lambda_client, caplog):
@@ -28,9 +30,14 @@ class TestRegisterLambdaFunctionsAdditionalCoverage:
             with caplog.at_level(logging.WARNING):
                 # Call the function
                 register_lambda_functions()
-                
+
                 # Should log a warning
-                assert "Both FUNCTION_TAG_KEY and FUNCTION_TAG_VALUE must be set to filter by tag" in caplog.text
-                
+                assert (
+                    'Both FUNCTION_TAG_KEY and FUNCTION_TAG_VALUE must be set to filter by tag'
+                    in caplog.text
+                )
+
                 # This should specifically target line 229 in server.py
-                assert len([record for record in caplog.records if record.levelname == 'WARNING']) > 0
+                assert (
+                    len([record for record in caplog.records if record.levelname == 'WARNING']) > 0
+                )

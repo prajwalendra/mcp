@@ -14,10 +14,10 @@ def test_format_lambda_response_unicode_decode_error():
     # Create a binary payload that will cause UnicodeDecodeError
     # This specifically targets line 120 in server.py
     payload = b'\x80\x81\x82\x83'  # Invalid UTF-8 sequence
-    
+
     # Call the function with the invalid payload
     result = format_lambda_response('test-function', payload)
-    
+
     # Check the result
     assert 'Function test-function returned payload:' in result
     assert str(payload) in result
