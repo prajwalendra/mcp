@@ -205,7 +205,9 @@ if st.session_state.generation_mode == 'color':
 # Checkbox for improved prompt
 use_improved_prompt = bool(
     st.checkbox(
-        'Use Improved Prompt', value=True, help='Improve the prompt using Amazon Nova Micro Model for image generation'
+        'Use Improved Prompt',
+        value=True,
+        help='Improve the prompt using Amazon Nova Micro Model for image generation',
     )
 )
 
