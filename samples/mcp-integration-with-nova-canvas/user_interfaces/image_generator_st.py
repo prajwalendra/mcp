@@ -205,12 +205,12 @@ if st.session_state.generation_mode == 'color':
 # Checkbox for improved prompt
 use_improved_prompt = bool(
     st.checkbox(
-        'Use Improved Prompt', value=True, help='Use the improved prompt for image generation'
+        'Use Improved Prompt', value=True, help='Improve the prompt using Amazon Nova Micro Model for image generation'
     )
 )
 
 # Generate button
-if st.button('Generate Image', type='primary', disabled=not prompt):
+if st.button('Generate Image', type='primary', disabled=not prompt or not negative_prompt):
     st.session_state.improved_prompt = None
     with st.spinner('Generating your image... This may take a minute.'):
         # Prepare colors if in color-guided mode
