@@ -10,11 +10,11 @@
 # and limitations under the License.
 
 import boto3
+import json
 import logging
 import os
 import sys
 import traceback
-import json
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import JSONResponse
@@ -61,104 +61,112 @@ async def global_exception_handler(request: Request, exc: Exception):
 # Define request/response models
 class ImageGenerationRequest(BaseModel):
     """Request model for image generation."""
-    prompt: str = Field(..., description="Text description of the image to generate")
-    negative_prompt: Optional[str] = Field("", description="Text to define what not to include in the image")
-    width: int = Field(1024, description="Width of the generated image (320-4096, divisible by 16)")
-    height: int = Field(1024, description="Height of the generated image (320-4096, divisible by 16)")
-    quality: str = Field("standard", description="Quality of the generated image ('standard' or 'premium')")
-    cfg_scale: float = Field(6.5, description="How strongly the image adheres to the prompt (1.1-10.0)")
-    seed: Optional[int] = Field(None, description="Seed for generation (0-858,993,459)")
-    number_of_images: int = Field(1, description="Number of images to generate (1-5)")
-    use_improved_prompt: Optional[bool] = Field(False, description="Use improved prompt for image generation")
-    colors: Optional[List[str]] = Field(None, description="List of hexadecimal color values for color-guided generation")
+
+    prompt: str = Field(..., description='Text description of the image to generate')
+    negative_prompt: Optional[str] = Field(
+        '', description='Text to define what not to include in the image'
+    )
+    width: int = Field(
+        1024, description='Width of the generated image (320-4096, divisible by 16)'
+    )
+    height: int = Field(
+        1024, description='Height of the generated image (320-4096, divisible by 16)'
+    )
+    quality: str = Field(
+        'standard', description="Quality of the generated image ('standard' or 'premium')"
+    )
+    cfg_scale: float = Field(
+        6.5, description='How strongly the image adheres to the prompt (1.1-10.0)'
+    )
+    seed: Optional[int] = Field(None, description='Seed for generation (0-858,993,459)')
+    number_of_images: int = Field(1, description='Number of images to generate (1-5)')
+    use_improved_prompt: Optional[bool] = Field(
+        False, description='Use improved prompt for image generation'
+    )
+    colors: Optional[List[str]] = Field(
+        None, description='List of hexadecimal color values for color-guided generation'
+    )
 
 
 class ImageGenerationResponse(BaseModel):
     """Response model for image generation."""
+
     status: str
     message: str
     image_paths: List[str]
-    improved_prompt: Optional[str] = ""
+    improved_prompt: Optional[str] = ''
 
 
 # Function to improve prompts with Nova Text Model
 async def improve_prompt_with_nova_text(prompt: str) -> str:
-    """
-    Improve the image generation prompt using Nova Text Model.
-    
+    """Improve the image generation prompt using Nova Text Model.
+
     Args:
         prompt: Original prompt from the user
-        
+
     Returns:
         str: Improved prompt for image generation
     """
     try:
         if not bedrock_runtime:
-            logger.warning("Bedrock client not initialized, returning original prompt")
+            logger.warning('Bedrock client not initialized, returning original prompt')
             return prompt
-            
+
         # Define system prompt
         system_list = [
             {
-                "text": "You are an expert at improving image generation prompts by adding specific details about composition, lighting, style, and technical aspects.",
-                "cachePoint": {
-          "type": "default"
-            }
+                'text': 'You are an expert at improving image generation prompts by adding specific details about composition, lighting, style, and technical aspects.',
+                'cachePoint': {'type': 'default'},
             }
         ]
 
         # Define message
         message_list = [
             {
-                "role": "user", 
-                "content": [
+                'role': 'user',
+                'content': [
                     {
-                        "text": f"""Enhance prompt with specific details:
+                        'text': f"""Enhance prompt with specific details:
                         - Composition: layout, perspective, focal point
                         - Lighting: direction, intensity, shadows
                         - Style: artistic technique, medium, texture
                         - Mood: atmosphere, emotion, time of day
                         - Technical: resolution, aspect ratio
-                        
+
                         Provide concise output (<1000 chars): {prompt}"""
                     }
-                ]
+                ],
             }
         ]
 
         # Configure inference parameters
-        inf_params = {
-            "max_new_tokens": 500
-        }
+        inf_params = {'max_new_tokens': 500}
 
         # Construct the request body
         request_body = {
-            "schemaVersion": "messages-v1",
-            "messages": message_list,
-            "system": system_list,
-            "inferenceConfig": inf_params
+            'schemaVersion': 'messages-v1',
+            'messages': message_list,
+            'system': system_list,
+            'inferenceConfig': inf_params,
         }
-
 
         # Call Nova Text Model through Bedrock
         response = bedrock_runtime.invoke_model(
-            modelId="amazon.nova-micro-v1:0",
-            body=json.dumps(request_body)
+            modelId='amazon.nova-micro-v1:0', body=json.dumps(request_body)
         )
-        
-        
+
         # Parse response
         response_body = json.loads(response['body'].read())
-        logger.info(f"Response body: {response_body}")
+        logger.info(f'Response body: {response_body}')
         improved_prompt = response_body['output']['message']['content'][0]['text'].strip()
-        
+
         logger.info(f"Original prompt: '{prompt}'")
         logger.info(f"Improved prompt: '{improved_prompt}'")
-        
+
         return improved_prompt
-        
+
     except Exception as e:
-        logger.error(f"Error improving prompt with Nova Text Model: {str(e)}")
+        logger.error(f'Error improving prompt with Nova Text Model: {str(e)}')
         # Return original prompt if improvement fails
         return prompt
 
@@ -178,7 +186,7 @@ async def generate_image(request: ImageGenerationRequest) -> Dict[str, Any]:
     try:
         # Check if use_improved_prompt is True
         if request.use_improved_prompt:
-            logger.info("Improving prompt with Nova Text Model")
+            logger.info('Improving prompt with Nova Text Model')
             # Improve prompt using Nova Text Model
             improved_prompt = await improve_prompt_with_nova_text(request.prompt)
             # Update the request with improved prompt
@@ -214,11 +222,11 @@ async def generate_image(request: ImageGenerationRequest) -> Dict[str, Any]:
                 return {
                     'status': 'error',
                     'message': 'No tools available from the Nova Canvas server.',
-                    'image_paths': []
+                    'image_paths': [],
                 }
 
             # Determine which tool to use based on whether colors are provided
-            logger.info(f'Determining which tool to use based on request parameters')
+            logger.info('Determining which tool to use based on request parameters')
             if request.colors:
                 # Use color-guided generation
                 logger.info(f'Using color-guided generation with {len(request.colors)} colors')
@@ -263,7 +271,7 @@ async def generate_image(request: ImageGenerationRequest) -> Dict[str, Any]:
                 return {
                     'status': 'error',
                     'message': f'Tool {tool_name} not found',
-                    'image_paths': []
+                    'image_paths': [],
                 }
 
             # Execute the tool
@@ -276,7 +284,7 @@ async def generate_image(request: ImageGenerationRequest) -> Dict[str, Any]:
                 # If tool_result is a string, try to parse it as JSON
                 if isinstance(tool_result, str):
                     tool_result = json.loads(tool_result)
-    
+
                 # Access paths from the dictionary
                 if isinstance(tool_result, dict) and 'paths' in tool_result:
                     logger.info(f'Image paths: {tool_result["paths"]}')
@@ -293,12 +301,12 @@ async def generate_image(request: ImageGenerationRequest) -> Dict[str, Any]:
                     if path.startswith('file://'):
                         path = path[7:]  # Remove file:// prefix
                     image_paths.append(path)
-                
+
                 return {
                     'status': 'success',
                     'message': f'Generated {len(image_paths)} image(s)',
                     'image_paths': image_paths,
-                    'improved_prompt': request.prompt
+                    'improved_prompt': request.prompt,
                 }
             else:
                 logger.error('No image paths found in tool result')
@@ -306,7 +314,7 @@ async def generate_image(request: ImageGenerationRequest) -> Dict[str, Any]:
                     'status': 'error',
                     'message': 'No images were generated',
                     'image_paths': [],
-                    'improved_prompt': request.prompt
+                    'improved_prompt': request.prompt,
                 }
 
     except Exception as e:
@@ -338,7 +346,7 @@ def health_check():
 
 # Run the FastAPI app with uvicorn
 if __name__ == '__main__':
-    import uvicorn
     import json
+    import uvicorn
 
     uvicorn.run(app, host='127.0.0.1', port=8000)
