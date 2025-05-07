@@ -14,6 +14,8 @@ def test_main_function(mock_parse_args, mock_load_config, mock_create_mcp_server
     """Test the main function."""
     # Setup mocks
     mock_args = MagicMock()
+    # Properly set log_level to a string value to avoid TypeError
+    mock_args.log_level = "INFO"
     mock_parse_args.return_value = mock_args
     
     mock_config = MagicMock()
@@ -41,6 +43,8 @@ def test_main_function_stdio(mock_parse_args, mock_load_config, mock_create_mcp_
     """Test the main function with stdio transport."""
     # Setup mocks
     mock_args = MagicMock()
+    # Properly set log_level to a string value to avoid TypeError
+    mock_args.log_level = "INFO" 
     mock_parse_args.return_value = mock_args
     
     mock_config = MagicMock()

@@ -175,13 +175,16 @@ async def test_generate_api_instructions(mock_logger):
     # Verify that the logger was called with the expected content
     mock_logger.assert_any_call(f"Generating dynamic instructions for {api_name} API")
     
-    # Check the second call to logger.info contains the API title and part of the description
+    # Check the second call to logger.info
+    mock_logger.assert_any_call("API contains 0 paths and 0 operations")
+    
+    # Check the third call to logger.info contains the API title and part of the description
     mock_logger.assert_any_call(ANY)
-    # Get the second call args
-    second_call_args = mock_logger.call_args_list[1][0][0]
-    assert "Generated instructions for test-api" in second_call_args
-    assert "# Test API Title" in second_call_args
-    assert "This is a test API description" in second_call_args
+    # Get the third call args (now index 2 since we have an additional log line)
+    third_call_args = mock_logger.call_args_list[2][0][0]
+    assert "Generated instructions for test-api" in third_call_args
+    assert "# Test API Title" in third_call_args
+    assert "This is a test API description" in third_call_args
 
 
 class AsyncMock(MagicMock):
