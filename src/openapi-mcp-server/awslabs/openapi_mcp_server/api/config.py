@@ -28,7 +28,8 @@ class Config:
     
     # Server configuration
     port: int = 8000
-    host: str = "0.0.0.0"
+    # Default to localhost for security; use SERVER_HOST env var to override when needed (e.g. in Docker)
+    host: str = "127.0.0.1"
     debug: bool = False
     transport: str = "stdio"  # stdio, sse
     message_timeout: int = 60

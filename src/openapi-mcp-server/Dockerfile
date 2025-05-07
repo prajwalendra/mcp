@@ -24,6 +24,8 @@ RUN chmod +x /usr/local/bin/docker-healthcheck.sh \
 RUN pip install --no-cache-dir -e .
 
 # Set default environment variables
+# Note: SERVER_HOST is intentionally overriding the secure default (127.0.0.1) since containers 
+# need to bind to all interfaces to be accessible from the host
 ENV SERVER_PORT=8888 \
     SERVER_HOST=0.0.0.0
 
