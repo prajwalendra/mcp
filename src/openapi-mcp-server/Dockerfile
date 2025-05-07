@@ -5,17 +5,20 @@ WORKDIR /app
 # Install system dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
-    && rm -rf /var/lib/apt/lists/*
+    && rm -rf /var/lib/apt/lists/* \
+    && groupadd --force --system app \
+    && useradd app -g app -d /app
 
 # Copy only the files needed to install dependencies first
-COPY pyproject.toml README.md /app/
+COPY --chown=app:app pyproject.toml README.md /app/
 
 # Copy project files
-COPY awslabs/ /app/awslabs/
-COPY docker-healthcheck.sh /usr/local/bin/docker-healthcheck.sh
+COPY --chown=app:app awslabs/ /app/awslabs/
+COPY --chown=app:app docker-healthcheck.sh /usr/local/bin/docker-healthcheck.sh
 
 # Make health check script executable
-RUN chmod +x /usr/local/bin/docker-healthcheck.sh
+RUN chmod +x /usr/local/bin/docker-healthcheck.sh \
+    && chown -R app:app /app
 
 # Install the package
 RUN pip install --no-cache-dir -e .
@@ -29,6 +32,9 @@ EXPOSE 8888
 
 # Configure health check
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 CMD ["docker-healthcheck.sh"]
+
+# Switch to non-root user
+USER app
 
 # Run the server
 CMD ["python", "-m", "awslabs.openapi_mcp_server.server"]
