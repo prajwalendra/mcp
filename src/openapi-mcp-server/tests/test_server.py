@@ -21,6 +21,7 @@ def test_config_default_values():
     assert config.api_name == "petstore"
     assert config.api_base_url == "https://petstore3.swagger.io/api/v3"
     assert config.auth_type == "none"
+    assert config.host == "127.0.0.1"  # Default host should be localhost for security
 
 
 def test_load_config():

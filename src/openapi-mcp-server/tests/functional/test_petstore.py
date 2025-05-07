@@ -144,9 +144,10 @@ class PetstoreTestRunner:
             # Set up environment for the server
             env = os.environ.copy()
             env["SERVER_PORT"] = str(self.port)
-            
+            env["SERVER_HOST"] = "127.0.0.1"  # Explicitly set to localhost for testing
+
             # Start the server process
-            self.log(f"Starting MCP server on port {self.port}")
+            self.log(f"Starting MCP server on port {self.port} (host: 127.0.0.1)")
             
             # Build command - use the module directly for clean execution
             # Make sure to use the correct argument names: --api-url and --spec-url

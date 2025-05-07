@@ -139,8 +139,12 @@ def test_server_startup(port=8888, verbose=False):
         # Start the process
         start_time = datetime.datetime.now()
         print(f"Starting server at {start_time.strftime('%H:%M:%S')} on port {port}")
+
+        # Use localhost (127.0.0.1) as host for security
+        env = os.environ.copy()
+        env["SERVER_HOST"] = "127.0.0.1"
         
-        process = subprocess.Popen(cmd, stdout=stdout, stderr=stderr)
+        process = subprocess.Popen(cmd, stdout=stdout, stderr=stderr, env=env)
         
         # Give the server time to start
         print("Waiting for server to initialize...")
