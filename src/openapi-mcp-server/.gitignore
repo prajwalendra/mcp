@@ -63,6 +63,7 @@ target/
 petstore_test_*.log
 server_output.tmp
 *.tmp
+test-docker*.sh
 
 # mkdocs
 site/
