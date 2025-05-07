@@ -2,7 +2,7 @@
 OpenAPI MCP Server - A server that dynamically creates MCP tools and resources from OpenAPI specifications.
 """
 
-__version__ = "0.1.0"
+__version__ = '0.1.0'
 
 
 import sys
@@ -15,9 +15,9 @@ logger.remove()
 # Set up enhanced logging format to include function name, line number, and logger name
 # Fixed the whitespace issue after log level by removing padding
 logger.add(
-    sys.stdout, 
-    format="<green>{time:YYYY-MM-DD HH:mm:ss.SSS}</green> | <level>{level}</level> | <cyan>{name}</cyan>:<cyan>{function}</cyan>:<cyan>{line}</cyan> - <level>{message}</level>",
-    level="INFO"
+    sys.stdout,
+    format='<green>{time:YYYY-MM-DD HH:mm:ss.SSS}</green> | <level>{level}</level> | <cyan>{name}</cyan>:<cyan>{function}</cyan>:<cyan>{line}</cyan> - <level>{message}</level>',
+    level='INFO',
 )
 
 
@@ -30,21 +30,21 @@ def get_caller_info():
     # Get the current frame
     current_frame = inspect.currentframe()
     if not current_frame:
-        return "unknown"
-    
+        return 'unknown'
+
     # Go up one frame
     parent_frame = current_frame.f_back
     if not parent_frame:
-        return "unknown"
-    
+        return 'unknown'
+
     # Go up another frame to find the caller
     caller_frame = parent_frame.f_back
     if not caller_frame:
-        return "unknown"
-    
+        return 'unknown'
+
     # Get filename, function name, and line number
     caller_info = inspect.getframeinfo(caller_frame)
-    return f"{caller_info.filename}:{caller_info.function}:{caller_info.lineno}"
+    return f'{caller_info.filename}:{caller_info.function}:{caller_info.lineno}'
 
 
-__all__ = ["__version__", "logger", "get_caller_info"]
+__all__ = ['__version__', 'logger', 'get_caller_info']

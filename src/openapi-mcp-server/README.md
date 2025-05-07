@@ -70,13 +70,13 @@ awslabs.openapi-mcp-server --api-name myapi --api-url https://api.example.com --
 
 ```bash
 # Basic Authentication
-awslabs.openapi-mcp-server --api-name myapi --api-url https://api.example.com --spec-url https://api.example.com/openapi.json --auth-type basic --auth-username myuser --auth-password mypassword
+awslabs.openapi-mcp-server --api-name myapi --api-url https://api.example.com --spec-url https://api.example.com/openapi.json --auth-type basic --auth-username YOUR_USERNAME --auth-password YOUR_PASSWORD # pragma: allowlist secret
 
 # Bearer Token Authentication
-awslabs.openapi-mcp-server --api-name myapi --api-url https://api.example.com --spec-url https://api.example.com/openapi.json --auth-type bearer --auth-token mytoken
+awslabs.openapi-mcp-server --api-name myapi --api-url https://api.example.com --spec-url https://api.example.com/openapi.json --auth-type bearer --auth-token YOUR_TOKEN # pragma: allowlist secret
 
 # API Key Authentication (in header)
-awslabs.openapi-mcp-server --api-name myapi --api-url https://api.example.com --spec-url https://api.example.com/openapi.json --auth-type api_key --auth-api-key myapikey --auth-api-key-name X-API-Key --auth-api-key-in header
+awslabs.openapi-mcp-server --api-name myapi --api-url https://api.example.com --spec-url https://api.example.com/openapi.json --auth-type api_key --auth-api-key YOUR_API_KEY --auth-api-key-name X-API-Key --auth-api-key-in header # pragma: allowlist secret
 ```
 
 ### Local OpenAPI Specification
@@ -116,10 +116,10 @@ export API_SPEC_PATH="/path/to/local/openapi.json"  # Optional: local file path
 
 # Authentication configuration
 export AUTH_TYPE="none"  # Options: none, basic, bearer, api_key
-export AUTH_USERNAME="myuser"  # For basic authentication
-export AUTH_PASSWORD="mypassword"  # For basic authentication
-export AUTH_TOKEN="mytoken"  # For bearer token authentication
-export AUTH_API_KEY="myapikey"  # For API key authentication
+export AUTH_USERNAME="PLACEHOLDER_USERNAME"  # For basic authentication # pragma: allowlist secret
+export AUTH_PASSWORD="PLACEHOLDER_PASSWORD"  # For basic authentication # pragma: allowlist secret
+export AUTH_TOKEN="PLACEHOLDER_TOKEN"  # For bearer token authentication # pragma: allowlist secret
+export AUTH_API_KEY="PLACEHOLDER_API_KEY"  # For API key authentication # pragma: allowlist secret
 export AUTH_API_KEY_NAME="X-API-Key"  # Name of the API key (default: api_key)
 export AUTH_API_KEY_IN="header"  # Where to place the API key (options: header, query, cookie)
 ```

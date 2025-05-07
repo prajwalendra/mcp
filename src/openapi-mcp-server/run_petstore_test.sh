@@ -31,18 +31,18 @@ def detailed_petstore_endpoints():
     """Fetch and list all endpoints in the Petstore API spec."""
     print("\n📊 ANALYZING PETSTORE API ENDPOINTS...")
     print("=" * 60)
-    
+
     try:
         print("Fetching Petstore OpenAPI spec from https://petstore3.swagger.io/api/v3/openapi.json")
         response = httpx.get("https://petstore3.swagger.io/api/v3/openapi.json")
         response.raise_for_status()
         spec = response.json()
-        
+
         # Count the paths and operations
         path_count = len(spec.get("paths", {}))
         operations = []
         resources = []
-        
+
         # Extract operations
         for path, methods in spec.get("paths", {}).items():
             for method, details in methods.items():
@@ -50,7 +50,7 @@ def detailed_petstore_endpoints():
                     op_id = details.get("operationId", f"{method.upper()} {path}")
                     summary = details.get("summary", "No summary provided")
                     tag = details.get("tags", ["untagged"])[0] if details.get("tags") else "untagged"
-                    
+
                     operations.append({
                         "id": op_id,
                         "method": method.upper(),
@@ -58,14 +58,14 @@ def detailed_petstore_endpoints():
                         "tag": tag,
                         "summary": summary
                     })
-                    
+
                     # For GET operations without parameters, they might be treated as resources
                     if method.lower() == "get" and not details.get("parameters") and "{" not in path:
                         resources.append({
                             "id": op_id,
                             "path": path
                         })
-        
+
         # Group by tag for better display
         tags = {}
         for op in operations:
@@ -73,12 +73,12 @@ def detailed_petstore_endpoints():
             if tag not in tags:
                 tags[tag] = []
             tags[tag].append(op)
-            
+
         # Display information
         print(f"\n📌 Found {path_count} unique API paths")
         print(f"📌 Found {len(operations)} operations that will be converted to MCP tools")
         print(f"📌 Found {len(resources)} potential resources (GET endpoints)")
-        
+
         # List operations grouped by tag
         print("\n🔧 TOOLS BY CATEGORY:")
         print("=" * 60)
@@ -87,16 +87,16 @@ def detailed_petstore_endpoints():
             for op in sorted(ops, key=lambda x: x["id"]):
                 tool_name = op["id"]
                 print(f"  • {tool_name.ljust(25)} - {op['method']} {op['path']} - {op['summary']}")
-        
+
         # List potential resources
         if resources:
             print("\n📚 POTENTIAL RESOURCES:")
             print("=" * 60)
             for res in sorted(resources, key=lambda x: x["id"]):
                 print(f"  • {res['id'].ljust(25)} - {res['path']}")
-        
+
         return path_count, len(operations), len(resources), operations, resources
-    
+
     except Exception as e:
         print(f"Error analyzing Petstore OpenAPI spec: {e}")
         return 0, 0, 0, [], []
@@ -105,27 +105,27 @@ def test_server_startup(port=8888, verbose=False):
     """Test that the server can start successfully with Petstore API."""
     print("\n🔄 TESTING SERVER STARTUP...")
     print("=" * 60)
-    
+
     # Get detailed endpoint information
     path_count, operation_count, resource_count, operations, resources = detailed_petstore_endpoints()
-    
+
     # Create temporary files for capturing server output
     server_output_file = "server_output.tmp"
-    
+
     try:
         # Build command with correct arguments
         cmd = [
-            sys.executable, "-m", 
-            "awslabs.openapi_mcp_server.server", 
+            sys.executable, "-m",
+            "awslabs.openapi_mcp_server.server",
             "--sse",
             "--port", str(port),
             "--api-name", "petstore",
             "--api-url", "https://petstore3.swagger.io/api/v3",
             "--spec-url", "https://petstore3.swagger.io/api/v3/openapi.json"
         ]
-        
+
         print(f"Executing: {' '.join(cmd)}")
-        
+
         # Set output redirection
         if verbose:
             stdout, stderr = None, None  # Show output in terminal
@@ -135,7 +135,7 @@ def test_server_startup(port=8888, verbose=False):
             f_output = open(server_output_file, 'w')
             stdout, stderr = f_output, f_output
             print("Running in quiet mode - errors will be reported if encountered")
-            
+
         # Start the process
         start_time = datetime.datetime.now()
         print(f"Starting server at {start_time.strftime('%H:%M:%S')} on port {port}")
@@ -143,23 +143,23 @@ def test_server_startup(port=8888, verbose=False):
         # Use localhost (127.0.0.1) as host for security
         env = os.environ.copy()
         env["SERVER_HOST"] = "127.0.0.1"
-        
+
         process = subprocess.Popen(cmd, stdout=stdout, stderr=stderr, env=env)
-        
+
         # Give the server time to start
         print("Waiting for server to initialize...")
         time.sleep(5)
-        
+
         # Check if the process is still running
         if process.poll() is None:
             print("Server process is running successfully")
-            
+
             errors = 0
-            
+
             # Summarize test results
             end_time = datetime.datetime.now()
             runtime = (end_time - start_time).total_seconds()
-            
+
             # Final test report
             print("\n" + "="*60)
             print(f"🔍 PETSTORE API FUNCTIONAL TEST REPORT")
@@ -171,37 +171,37 @@ def test_server_startup(port=8888, verbose=False):
             print(f"⚠️ Errors encountered: {errors}")
             print(f"⏱️ Test duration: {runtime:.2f} seconds")
             print("="*60)
-            
+
             return True
         else:
             # Get the return code
             retcode = process.poll()
-            
+
             # Handle server output
             if not verbose and 'f_output' in locals():
                 f_output.close()
-                
+
                 with open(server_output_file, 'r') as f:
                     server_output = f.read()
                     print(f"Server failed to start (exit code: {retcode})")
                     print(f"Server output: {server_output}")
-            
+
             return False
-            
+
     except Exception as e:
         print(f"Test failed with exception: {e}")
         return False
-        
+
     finally:
         # Clean up the server process
         if 'process' in locals() and process.poll() is None:
             print("Stopping server process...")
-            
+
             # Redirect stderr to devnull to avoid the traceback
             with open(os.devnull, 'w') as devnull:
                 # Save the original stderr
                 old_stderr = sys.stderr
-                
+
                 try:
                     if verbose:
                         # In verbose mode, kill the process without showing traceback
@@ -219,9 +219,9 @@ def test_server_startup(port=8888, verbose=False):
                 finally:
                     # Restore stderr
                     sys.stderr = old_stderr
-            
+
             print("Server stopped cleanly")
-        
+
         # Clean up temporary files
         if not verbose and os.path.exists(server_output_file):
             os.unlink(server_output_file)
@@ -231,12 +231,12 @@ def main():
     parser = argparse.ArgumentParser(description="Test OpenAPI MCP server with Petstore API")
     parser.add_argument("--port", type=int, default=8888, help="Port to run the server on")
     parser.add_argument("--verbose", "-v", action="store_true", help="Print verbose output")
-    
+
     args = parser.parse_args()
-    
+
     print(f"\n🚀 Starting Petstore functional test (port: {args.port}, verbose: {args.verbose})")
     success = test_server_startup(args.port, args.verbose)
-    
+
     print(f"Test {'succeeded' if success else 'failed'}")
     return 0 if success else 1
 
