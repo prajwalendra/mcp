@@ -30,11 +30,11 @@ ENV SERVER_PORT=8888 \
 # Expose the default port
 EXPOSE 8888
 
-# Configure health check
-HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 CMD ["docker-healthcheck.sh"]
-
 # Switch to non-root user
 USER app
+
+# Configure health check
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 CMD ["docker-healthcheck.sh"]
 
 # Run the server
 CMD ["python", "-m", "awslabs.openapi_mcp_server.server"]
