@@ -23,12 +23,22 @@ logger.add(
 
 def get_caller_info():
     """Get information about the caller of a function.
-    
+
     Returns:
         str: A string containing information about the caller
     """
-    # Get the current frame and go up one frame to find the caller
-    caller_frame = inspect.currentframe().f_back.f_back
+    # Get the current frame
+    current_frame = inspect.currentframe()
+    if not current_frame:
+        return "unknown"
+    
+    # Go up one frame
+    parent_frame = current_frame.f_back
+    if not parent_frame:
+        return "unknown"
+    
+    # Go up another frame to find the caller
+    caller_frame = parent_frame.f_back
     if not caller_frame:
         return "unknown"
     
