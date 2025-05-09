@@ -87,7 +87,7 @@ class MetricsProvider(ABC):
 class InMemoryMetricsProvider(MetricsProvider):
     """Simple in-memory metrics provider."""
 
-    def __init__(self, max_history: int = None):
+    def __init__(self, max_history: Optional[int] = None):
         """Initialize the metrics provider.
 
         Args:
@@ -250,6 +250,7 @@ class InMemoryMetricsProvider(MetricsProvider):
 
 # Try to import prometheus_client if enabled
 PROMETHEUS_AVAILABLE = False
+prometheus_client = None
 if USE_PROMETHEUS:
     try:
         import prometheus_client
@@ -268,7 +269,7 @@ class PrometheusMetricsProvider(MetricsProvider):
 
     def __init__(self):
         """Initialize the Prometheus metrics provider."""
-        if not PROMETHEUS_AVAILABLE:
+        if not PROMETHEUS_AVAILABLE or prometheus_client is None:
             raise ImportError('prometheus_client not available')
 
         # Create Prometheus metrics

@@ -18,6 +18,7 @@ from typing import Any, Dict, Optional, Union
 
 # Try to import tenacity if enabled
 TENACITY_AVAILABLE = False
+tenacity = None
 if USE_TENACITY:
     try:
         import tenacity
@@ -39,8 +40,8 @@ class HttpClientFactory:
         cookies: Optional[Dict[str, str]] = None,
         timeout: Union[float, httpx.Timeout] = 30.0,
         follow_redirects: bool = True,
-        max_connections: int = None,
-        max_keepalive: int = None,
+        max_connections: Optional[int] = None,
+        max_keepalive: Optional[int] = None,
     ) -> httpx.AsyncClient:
         """Create an HTTP client with enhanced functionality.
 
@@ -108,7 +109,7 @@ async def make_request_with_retry(
         httpx.HTTPError: If the request fails after all retries
     """
     # Use tenacity if available and enabled
-    if USE_TENACITY and TENACITY_AVAILABLE:
+    if USE_TENACITY and TENACITY_AVAILABLE and tenacity is not None:
 
         @tenacity.retry(
             stop=tenacity.stop_after_attempt(max_retries),
@@ -117,7 +118,7 @@ async def make_request_with_retry(
             ),
             retry=tenacity.retry_if_exception_type((httpx.TimeoutException, httpx.ConnectError)),
             before_sleep=lambda retry_state: logger.warning(
-                f'Request failed, retrying ({retry_state.attempt_number}/{max_retries}): {retry_state.outcome.exception()}'
+                f'Request failed, retrying ({retry_state.attempt_number}/{max_retries}): {retry_state.outcome.exception() if retry_state.outcome else "Unknown error"}'
             ),
         )
         @api_call_timer

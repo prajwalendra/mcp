@@ -10,7 +10,7 @@ try:
     from mcp.prompts import Prompt
 except ImportError:
     try:
-        from fastmcp.prompts import Prompt
+        from fastmcp.prompts.prompt import Prompt
     except ImportError:
         # Define a simple Prompt class if neither is available
         class Prompt:

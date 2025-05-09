@@ -10,6 +10,7 @@ from typing import Any, Dict, List, Tuple
 
 
 # Check if openapi-core is available
+openapi_core = None
 try:
     import openapi_core
 
@@ -54,7 +55,7 @@ def validate_openapi_spec(spec: Dict[str, Any]) -> bool:
         logger.warning(f'OpenAPI version {version} may not be fully supported')
 
     # Use openapi-core for additional validation if available
-    if USE_OPENAPI_CORE:
+    if USE_OPENAPI_CORE and openapi_core is not None:
         try:
             # Create spec object - this will validate the spec
             if hasattr(openapi_core, 'create_spec'):

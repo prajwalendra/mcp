@@ -17,6 +17,7 @@ T = TypeVar('T')
 
 # Try to import cachetools if enabled
 CACHETOOLS_AVAILABLE = False
+cachetools = None
 if USE_CACHETOOLS:
     try:
         import cachetools
@@ -56,7 +57,7 @@ class CacheProvider(Generic[T], ABC):
 class InMemoryCacheProvider(CacheProvider[T]):
     """Simple in-memory cache provider with TTL support."""
 
-    def __init__(self, ttl_seconds: int = None):
+    def __init__(self, ttl_seconds: Optional[int] = None):
         """Initialize the cache provider.
 
         Args:
@@ -122,7 +123,7 @@ class InMemoryCacheProvider(CacheProvider[T]):
 class CachetoolsProvider(CacheProvider[T]):
     """Cache provider using the cachetools library."""
 
-    def __init__(self, ttl_seconds: int = None, maxsize: int = None):
+    def __init__(self, ttl_seconds: Optional[int] = None, maxsize: Optional[int] = None):
         """Initialize the cache provider.
 
         Args:
@@ -173,7 +174,7 @@ class CachetoolsProvider(CacheProvider[T]):
 
 
 # Create the appropriate cache provider based on configuration
-def create_cache_provider(ttl_seconds: int = None) -> CacheProvider:
+def create_cache_provider(ttl_seconds: Optional[int] = None) -> CacheProvider:
     """Create a cache provider based on configuration.
 
     Args:
@@ -196,7 +197,7 @@ def create_cache_provider(ttl_seconds: int = None) -> CacheProvider:
     return InMemoryCacheProvider(ttl_seconds=ttl_seconds)
 
 
-def cached(ttl_seconds: int = None) -> Callable:
+def cached(ttl_seconds: Optional[int] = None) -> Callable:
     """Decorator to cache function results.
 
     Args:
