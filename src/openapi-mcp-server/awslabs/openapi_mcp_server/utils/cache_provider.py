@@ -130,7 +130,7 @@ class CachetoolsProvider(CacheProvider[T]):
             ttl_seconds: Time-to-live in seconds for cache entries (defaults to config value)
             maxsize: Maximum number of entries in the cache (defaults to config value)
         """
-        if not CACHETOOLS_AVAILABLE:
+        if not CACHETOOLS_AVAILABLE or cachetools is None:
             raise ImportError('cachetools not available')
 
         # Use configuration values if not explicitly provided

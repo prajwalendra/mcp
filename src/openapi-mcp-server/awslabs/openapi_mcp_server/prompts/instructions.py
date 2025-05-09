@@ -54,7 +54,8 @@ async def generate_api_instructions(
 
     # Get all tools for this API
     try:
-        all_tools = await server.get_tools()
+        # Ignore type error since FastMCP in newer versions has get_tools
+        all_tools = await server.get_tools()  # type: ignore
         api_tools = [tool for tool in all_tools.values() if tool.name.startswith(f'{api_name}_')]
         logger.debug(f'Found {len(api_tools)} tools for API {api_name}')
     except Exception as e:
@@ -63,7 +64,8 @@ async def generate_api_instructions(
 
     # Get all resources for this API
     try:
-        all_resources = await server.get_resources()
+        # Ignore type error since FastMCP in newer versions has get_resources
+        all_resources = await server.get_resources()  # type: ignore
         api_resources = [
             res for res in all_resources.values() if str(res.uri).startswith(f'{api_name}+')
         ]

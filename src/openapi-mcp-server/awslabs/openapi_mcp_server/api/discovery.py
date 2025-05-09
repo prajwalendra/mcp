@@ -87,7 +87,8 @@ async def get_api_tools(server: FastMCP, api_name: str) -> List[ToolInfo]:
 
     # Get all tools for this API
     try:
-        all_tools = await server.get_tools()
+        # Ignore type error since FastMCP in newer versions has get_tools
+        all_tools = await server.get_tools()  # type: ignore
         
         # Defensive programming: check if all_tools is None or not a dict
         if not all_tools or not isinstance(all_tools, dict):

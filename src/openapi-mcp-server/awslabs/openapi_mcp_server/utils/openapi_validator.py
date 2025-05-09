@@ -59,13 +59,18 @@ def validate_openapi_spec(spec: Dict[str, Any]) -> bool:
         try:
             # Create spec object - this will validate the spec
             if hasattr(openapi_core, 'create_spec'):
-                openapi_core.create_spec(spec)
+                # Ignore type error since we're checking dynamically
+                openapi_core.create_spec(spec)  # type: ignore
             # For older versions of openapi-core
-            elif hasattr(openapi_core, 'Spec') and hasattr(openapi_core.Spec, 'create'):
-                openapi_core.Spec.create(spec)
+            elif hasattr(openapi_core, 'Spec'):
+                spec_class = getattr(openapi_core, 'Spec')
+                if hasattr(spec_class, 'create'):
+                    # Ignore type error since we're checking dynamically
+                    spec_class.create(spec)  # type: ignore
             # For newer versions of openapi-core
             elif hasattr(openapi_core, 'OpenAPISpec'):
-                openapi_core.OpenAPISpec.create(spec)
+                # Ignore type error since we're checking dynamically
+                openapi_core.OpenAPISpec.create(spec)  # type: ignore
             else:
                 logger.warning('Unsupported openapi-core version - skipping additional validation')
             logger.debug('OpenAPI spec validated with openapi-core')

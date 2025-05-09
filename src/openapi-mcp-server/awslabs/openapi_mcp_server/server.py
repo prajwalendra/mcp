@@ -121,12 +121,14 @@ def create_mcp_server(config: Config) -> FastMCP:
         logger.info(f'Successfully configured {config.api_name} API')
 
         # Register discovery tools
-        register_discovery_tools(server, config.api_name, openapi_spec, config.api_base_url)
+        # Ignore type error since FastMCPOpenAPI is compatible with FastMCP in practice
+        register_discovery_tools(server, config.api_name, openapi_spec, config.api_base_url)  # type: ignore
         logger.info(f'Registered discovery tools for {config.api_name} API')
 
         # Generate dynamic instructions
         logger.info(f'Generating instructions for API: {config.api_name}')
-        asyncio.run(generate_api_instructions(server, config.api_name, openapi_spec))
+        # Ignore type error since FastMCPOpenAPI is compatible with FastMCP in practice
+        asyncio.run(generate_api_instructions(server, config.api_name, openapi_spec))  # type: ignore
 
         # Register health check tool
         async def health_check() -> Dict[str, Any]:
