@@ -102,12 +102,12 @@ def test_validate_openapi_spec_with_openapi_core_openapi_spec_class():
     mock_openapi_core.create_spec = None
     mock_openapi_core.Spec = None
     mock_openapi_core.OpenAPISpec = MagicMock()
-    
+
     with patch(
         'awslabs.openapi_mcp_server.utils.openapi_validator.openapi_core', mock_openapi_core
     ):
         result = validate_openapi_spec(spec)
-        
+
         # Just verify the function returns True
         assert result is True
 

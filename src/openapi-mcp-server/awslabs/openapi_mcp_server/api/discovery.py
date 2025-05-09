@@ -5,7 +5,7 @@ from awslabs.openapi_mcp_server.utils.metrics_provider import metrics
 from awslabs.openapi_mcp_server.utils.openapi_validator import extract_api_structure
 from mcp.server.fastmcp import FastMCP
 from pydantic import BaseModel, Field
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List
 
 
 class ApiInfo(BaseModel):
@@ -89,21 +89,25 @@ async def get_api_tools(server: FastMCP, api_name: str) -> List[ToolInfo]:
     try:
         # Ignore type error since FastMCP in newer versions has get_tools
         all_tools = await server.get_tools()  # type: ignore
-        
+
         # Defensive programming: check if all_tools is None or not a dict
         if not all_tools or not isinstance(all_tools, dict):
-            logger.warning(f"Invalid tools data returned: {type(all_tools)}")
+            logger.warning(f'Invalid tools data returned: {type(all_tools)}')
             return tools
-            
+
         # Filter tools that match our API name prefix
         api_tools = []
         for tool_key, tool in all_tools.items():
             # Check if the tool has a name attribute and it's a string
-            if hasattr(tool, 'name') and isinstance(tool.name, str) and tool.name.startswith(f'{api_name}_'):
+            if (
+                hasattr(tool, 'name')
+                and isinstance(tool.name, str)
+                and tool.name.startswith(f'{api_name}_')
+            ):
                 api_tools.append(tool)
             # If tool itself is a string (shouldn't happen but just in case)
             elif isinstance(tool, str) and tool.startswith(f'{api_name}_'):
-                logger.debug(f"Found tool as string: {tool}")
+                logger.debug(f'Found tool as string: {tool}')
                 # Skip this tool as we can't extract more info
                 continue
 
@@ -140,7 +144,11 @@ async def get_api_tools(server: FastMCP, api_name: str) -> List[ToolInfo]:
                             parameters.append(param_info)
 
                 # Get usage stats - ensure tool.name is a string
-                tool_name = tool.name if hasattr(tool, 'name') and isinstance(tool.name, str) else str(tool)
+                tool_name = (
+                    tool.name
+                    if hasattr(tool, 'name') and isinstance(tool.name, str)
+                    else str(tool)
+                )
                 stats = tool_stats.get(tool_name, {})
                 usage_count = stats.get('count', 0)
                 error_rate = stats.get('error_rate', 0.0)
@@ -166,7 +174,7 @@ async def get_api_tools(server: FastMCP, api_name: str) -> List[ToolInfo]:
                     )
                 )
             except Exception as e:
-                logger.warning(f"Error processing tool {getattr(tool, 'name', 'unknown')}: {e}")
+                logger.warning(f'Error processing tool {getattr(tool, "name", "unknown")}: {e}')
                 continue
 
     except Exception as e:
@@ -184,7 +192,7 @@ async def get_api_stats() -> ApiStats:
     try:
         summary = metrics.get_summary()
         api_calls = summary.get('api_calls', {})
-        
+
         return ApiStats(
             total_calls=api_calls.get('total', 0),
             error_count=api_calls.get('errors', 0),
@@ -193,7 +201,7 @@ async def get_api_stats() -> ApiStats:
             recent_errors=metrics.get_recent_errors(limit=5),
         )
     except Exception as e:
-        logger.warning(f"Error getting API stats: {e}")
+        logger.warning(f'Error getting API stats: {e}')
         # Return default values if there's an error
         return ApiStats(
             total_calls=0,

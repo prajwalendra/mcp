@@ -1,15 +1,15 @@
 """Tests for enhanced instructions generation."""
 
 import pytest
-from unittest.mock import MagicMock, patch
 from awslabs.openapi_mcp_server.prompts.enhanced_instructions import (
-    generate_enhanced_api_instructions,
+    categorize_operations,
     format_parameter_info,
     format_request_body_info,
     format_response_info,
+    generate_enhanced_api_instructions,
     generate_tool_description,
-    categorize_operations,
 )
+from unittest.mock import MagicMock, patch
 
 
 def test_format_parameter_info():
@@ -153,7 +153,7 @@ def test_categorize_operations():
     ]
     categories = categorize_operations(operations)
     assert 'Pet' in categories
-    
+
     # The categorization might put 'placeOrder' in a different category
     # depending on the regex matching, so we'll just check that all operations
     # are categorized somewhere
@@ -236,10 +236,10 @@ async def test_generate_enhanced_api_instructions():
     mock_prompt = MagicMock()
     with patch('awslabs.openapi_mcp_server.prompts.enhanced_instructions.Prompt') as MockPrompt:
         MockPrompt.from_function.return_value = mock_prompt
-        
+
         # Call the function
         await generate_enhanced_api_instructions(server, 'test', openapi_spec)
-        
+
         # Check that the prompt was created and added
         assert MockPrompt.from_function.called
         assert server._prompt_manager.add_prompt.called
