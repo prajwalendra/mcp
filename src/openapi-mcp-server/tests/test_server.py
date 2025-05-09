@@ -254,7 +254,8 @@ def test_create_mcp_server(mock_asyncio_run, mock_load_openapi_spec):
 
     assert server is not None
     mock_load_openapi_spec.assert_called_once()
-    mock_asyncio_run.assert_called_once()
+    # We now call asyncio.run twice (once for regular instructions, once for enhanced)
+    assert mock_asyncio_run.call_count == 2
 
 
 @patch('awslabs.openapi_mcp_server.server.load_openapi_spec')
