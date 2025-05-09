@@ -88,7 +88,7 @@ async def get_api_tools(server: FastMCP, api_name: str) -> List[ToolInfo]:
     # Get all tools for this API
     try:
         all_tools = await server.get_tools()
-        api_tools = [tool for tool in all_tools.values() if tool.name.startswith(f'{api_name}_')]
+        api_tools = [tool for tool in all_tools.values() if isinstance(tool.name, str) and tool.name.startswith(f'{api_name}_')]
 
         # Get tool stats
         tool_stats = metrics.get_tool_stats()
@@ -97,39 +97,47 @@ async def get_api_tools(server: FastMCP, api_name: str) -> List[ToolInfo]:
             # Extract method and path from description
             method = 'GET'  # Default
             path = ''
-            description_lines = tool.description.split('\n')
-            for line in description_lines:
-                if line.startswith('HTTP'):
-                    parts = line.split(' ', 2)
-                    if len(parts) >= 2:
-                        method = parts[1]
-                    if len(parts) >= 3:
-                        path = parts[2]
-                    break
+            if isinstance(tool.description, str):
+                description_lines = tool.description.split('\n')
+                for line in description_lines:
+                    if line.startswith('HTTP'):
+                        parts = line.split(' ', 2)
+                        if len(parts) >= 2:
+                            method = parts[1]
+                        if len(parts) >= 3:
+                            path = parts[2]
+                        break
 
             # Get parameters
             parameters = []
             if hasattr(tool, 'parameters') and tool.parameters:
                 for param in tool.parameters:
-                    parameters.append(
-                        {
+                    if hasattr(param, 'name'):
+                        param_info = {
                             'name': param.name,
-                            'type': str(param.type),
-                            'required': param.required,
-                            'description': param.description,
+                            'type': str(getattr(param, 'type', 'unknown')),
+                            'required': getattr(param, 'required', False),
+                            'description': getattr(param, 'description', ''),
                         }
-                    )
+                        parameters.append(param_info)
 
             # Get usage stats
-            stats = tool_stats.get(tool.name, {})
+            stats = tool_stats.get(tool.name, {}) if isinstance(tool.name, str) else {}
             usage_count = stats.get('count', 0)
             error_rate = stats.get('error_rate', 0.0)
             avg_duration_ms = stats.get('avg_duration_ms', 0.0)
 
+            # Get first line of description or use empty string if description is not a string
+            first_line = ''
+            if isinstance(tool.description, str):
+                description_parts = tool.description.split('\n')
+                if description_parts:
+                    first_line = description_parts[0]
+
             tools.append(
                 ToolInfo(
                     name=tool.name,
-                    description=tool.description.split('\n')[0],  # First line only
+                    description=first_line,
                     method=method,
                     path=path,
                     parameters=parameters,
