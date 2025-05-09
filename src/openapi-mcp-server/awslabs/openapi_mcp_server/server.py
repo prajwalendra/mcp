@@ -129,6 +129,14 @@ def create_mcp_server(config: Config) -> FastMCP:
         logger.info(f'Generating instructions for API: {config.api_name}')
         # Ignore type error since FastMCPOpenAPI is compatible with FastMCP in practice
         asyncio.run(generate_api_instructions(server, config.api_name, openapi_spec))  # type: ignore
+        
+        # Generate enhanced instructions
+        try:
+            from awslabs.openapi_mcp_server.prompts.enhanced_instructions import generate_enhanced_api_instructions
+            logger.info(f'Generating enhanced instructions for API: {config.api_name}')
+            asyncio.run(generate_enhanced_api_instructions(server, config.api_name, openapi_spec))  # type: ignore
+        except Exception as e:
+            logger.warning(f'Failed to generate enhanced instructions: {e}')
 
         # Register health check tool
         async def health_check() -> Dict[str, Any]:
