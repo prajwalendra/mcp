@@ -1,42 +1,74 @@
-FROM python:3.11-slim
+# Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License"). You may not use this file except in compliance
+# with the License. A copy of the License is located at
+#
+#    http://www.apache.org/licenses/LICENSE-2.0
+#
+# or in the 'license' file accompanying this file. This file is distributed on an 'AS IS' BASIS, WITHOUT WARRANTIES
+# OR CONDITIONS OF ANY KIND, express or implied. See the License for the specific language governing permissions
+# and limitations under the License.
 
+FROM public.ecr.aws/sam/build-python3.10@sha256:04cdbe84bec08d17d621192bc3f0a9e4a85a83f2ac99aa9241659dfac0d845ea AS uv
+
+# Install the project into `/app`
 WORKDIR /app
 
-# Install system dependencies
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    curl \
-    && rm -rf /var/lib/apt/lists/* \
-    && groupadd --force --system app \
-    && useradd app -g app -d /app
+# Enable bytecode compilation
+ENV UV_COMPILE_BYTECODE=1
 
-# Copy only the files needed to install dependencies first
-COPY --chown=app:app pyproject.toml README.md /app/
+# Copy from the cache instead of linking since it's a mounted volume
+ENV UV_LINK_MODE=copy
 
-# Copy project files
-COPY --chown=app:app awslabs/ /app/awslabs/
-COPY --chown=app:app docker-healthcheck.sh /usr/local/bin/docker-healthcheck.sh
+# Prefer the system python
+ENV UV_PYTHON_PREFERENCE=only-system
 
-# Make health check script executable
-RUN chmod +x /usr/local/bin/docker-healthcheck.sh \
-    && chown -R app:app /app
+# Run without updating the uv.lock file like running with `--frozen`
+ENV UV_FROZEN=true
 
-# Install the package
-RUN pip install --no-cache-dir -e .
+# Copy the required files first
+COPY pyproject.toml uv.lock ./
 
-# Set default environment variables
-# Note: SERVER_HOST is intentionally overriding the secure default (127.0.0.1) since containers
-# need to bind to all interfaces to be accessible from the host
-ENV SERVER_PORT=8888 \
-    SERVER_HOST=0.0.0.0
+# Install the project's dependencies using the lockfile and settings
+RUN --mount=type=cache,target=/root/.cache/uv \
+    pip install uv && \
+    uv sync --frozen --no-install-project --no-dev --no-editable
 
-# Expose the default port
-EXPOSE 8888
+# Then, add the rest of the project source code and install it
+# Installing separately from its dependencies allows optimal layer caching
+COPY . /app
+RUN --mount=type=cache,target=/root/.cache/uv \
+    uv sync --frozen --no-dev --no-editable
 
-# Switch to non-root user
+# Make the directory just in case it doesn't exist
+RUN mkdir -p /root/.local
+
+FROM public.ecr.aws/sam/build-python3.10@sha256:04cdbe84bec08d17d621192bc3f0a9e4a85a83f2ac99aa9241659dfac0d845ea
+
+# Place executables in the environment at the front of the path and include other binaries
+ENV PATH="/app/.venv/bin:$PATH:/usr/sbin"
+
+# Install lsof for the healthcheck
+# Install other tools as needed for the MCP server
+# Add non-root user and ability to change directory into /root
+RUN yum update -y && \
+    yum install -y lsof && \
+    yum clean all -y && \
+    rm -rf /var/cache/yum && \
+    groupadd --force --system app && \
+    useradd app -g app -d /app && \
+    chmod o+x /root
+
+# Get the project from the uv layer
+COPY --from=uv --chown=app:app /root/.local /root/.local
+COPY --from=uv --chown=app:app /app/.venv /app/.venv
+
+# Get healthcheck script
+COPY ./docker-healthcheck.sh /usr/local/bin/docker-healthcheck.sh
+RUN chmod +x /usr/local/bin/docker-healthcheck.sh
+
+# Run as non-root
 USER app
 
-# Configure health check
-HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 CMD ["docker-healthcheck.sh"]
-
-# Run the server
-CMD ["python", "-m", "awslabs.openapi_mcp_server.server"]
+HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 CMD [ "docker-healthcheck.sh" ]
+ENTRYPOINT ["python", "-m", "awslabs.openapi_mcp_server.server"]

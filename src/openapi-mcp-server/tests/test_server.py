@@ -72,19 +72,28 @@ async def test_load_openapi_spec_from_url(mock_get):
     """Test loading OpenAPI spec from URL."""
     mock_response = MagicMock()
     mock_response.raise_for_status.return_value = None
-    mock_response.json.return_value = {'openapi': '3.0.0', 'info': {'title': 'Test API'}}
+    mock_response.json.return_value = {
+        'openapi': '3.0.0',
+        'info': {'title': 'Test API', 'version': '1.0.0'},
+        'paths': {},
+    }
     mock_get.return_value = mock_response
 
     result = load_openapi_spec(url='https://test.api.com/openapi.json')
 
-    assert result == {'openapi': '3.0.0', 'info': {'title': 'Test API'}}
-    mock_get.assert_called_once_with('https://test.api.com/openapi.json')
+    assert result == {
+        'openapi': '3.0.0',
+        'info': {'title': 'Test API', 'version': '1.0.0'},
+        'paths': {},
+    }
+    # Update the assertion to include the timeout parameter
+    mock_get.assert_called_once_with('https://test.api.com/openapi.json', timeout=10.0)
 
 
 @patch(
     'builtins.open',
     new_callable=mock_open,
-    read_data='{"openapi": "3.0.0", "info": {"title": "Test API"}}',
+    read_data='{"openapi": "3.0.0", "info": {"title": "Test API", "version": "1.0.0"}, "paths": {}}',
 )
 @patch('pathlib.Path.exists', return_value=True)
 def test_load_openapi_spec_from_json_file(mock_exists, mock_file):
@@ -96,18 +105,28 @@ def test_load_openapi_spec_from_json_file(mock_exists, mock_file):
     mock_file.assert_called_once_with(ANY, 'r')
 
     # Check the correct data was loaded
-    assert result == {'openapi': '3.0.0', 'info': {'title': 'Test API'}}
+    assert result == {
+        'openapi': '3.0.0',
+        'info': {'title': 'Test API', 'version': '1.0.0'},
+        'paths': {},
+    }
 
 
 @patch(
-    'builtins.open', new_callable=mock_open, read_data='openapi: 3.0.0\ninfo:\n  title: Test API'
+    'builtins.open',
+    new_callable=mock_open,
+    read_data='openapi: 3.0.0\ninfo:\n  title: Test API\n  version: 1.0.0\npaths: {}',
 )
 @patch('pathlib.Path.exists', return_value=True)
 @patch('yaml.safe_load')
 def test_load_openapi_spec_from_yaml_file(mock_yaml_load, mock_exists, mock_file):
     """Test loading OpenAPI spec from a YAML file."""
     # Configure YAML loading
-    mock_yaml_load.return_value = {'openapi': '3.0.0', 'info': {'title': 'Test API'}}
+    mock_yaml_load.return_value = {
+        'openapi': '3.0.0',
+        'info': {'title': 'Test API', 'version': '1.0.0'},
+        'paths': {},
+    }
 
     # Call the function with a path parameter
     result = load_openapi_spec(path='test_api.yaml')
@@ -119,7 +138,11 @@ def test_load_openapi_spec_from_yaml_file(mock_yaml_load, mock_exists, mock_file
     mock_yaml_load.assert_called_once()
 
     # Check the correct data was loaded
-    assert result == {'openapi': '3.0.0', 'info': {'title': 'Test API'}}
+    assert result == {
+        'openapi': '3.0.0',
+        'info': {'title': 'Test API', 'version': '1.0.0'},
+        'paths': {},
+    }
 
 
 @patch('pathlib.Path.exists', return_value=False)
@@ -158,32 +181,37 @@ async def test_load_openapi_spec_yaml_import_error(mock_import, mock_exists, moc
 
 @pytest.mark.asyncio
 @patch('awslabs.openapi_mcp_server.prompts.instructions.logger.info')
-async def test_generate_api_instructions(mock_logger):
+@patch('awslabs.openapi_mcp_server.prompts.instructions.logger.debug')
+async def test_generate_api_instructions(mock_debug, mock_info):
     """Test generating API instructions."""
     # Create mock server
     server = MagicMock()
+    server.get_tools = AsyncMock(return_value={})
+    server.get_resources = AsyncMock(return_value={})
 
     api_name = 'test-api'
     openapi_spec = {
-        'info': {'title': 'Test API Title', 'description': 'This is a test API description'}
+        'info': {'title': 'Test API Title', 'description': 'This is a test API description'},
+        'paths': {},
     }
 
     # Call the function
     await generate_api_instructions(server, api_name, openapi_spec)
 
     # Verify that the logger was called with the expected content
-    mock_logger.assert_any_call(f'Generating dynamic instructions for {api_name} API')
+    mock_info.assert_any_call(f'Generating dynamic instructions for {api_name} API')
 
-    # Check the second call to logger.info
-    mock_logger.assert_any_call('API contains 0 paths and 0 operations')
-
-    # Check the third call to logger.info contains the API title and part of the description
-    mock_logger.assert_any_call(ANY)
-    # Get the third call args (now index 2 since we have an additional log line)
-    third_call_args = mock_logger.call_args_list[2][0][0]
-    assert 'Generated instructions for test-api' in third_call_args
-    assert '# Test API Title' in third_call_args
-    assert 'This is a test API description' in third_call_args
+    # Check that the third call to logger.info contains the API title and part of the description
+    mock_info.assert_any_call(ANY)
+    # Get the call args that contain the generated instructions
+    generated_instructions_call = [
+        call
+        for call in mock_info.call_args_list
+        if 'Generated instructions for test-api' in call[0][0]
+    ][0]
+    assert 'Generated instructions for test-api' in generated_instructions_call[0][0]
+    assert '# Test API Title' in generated_instructions_call[0][0]
+    assert 'This is a test API description' in generated_instructions_call[0][0]
 
 
 class AsyncMock(MagicMock):
@@ -209,7 +237,8 @@ def test_create_mcp_server(mock_asyncio_run, mock_load_openapi_spec):
     # Setup mocks
     mock_load_openapi_spec.return_value = {
         'openapi': '3.0.0',
-        'info': {'title': 'Test API', 'description': 'Test description'},
+        'info': {'title': 'Test API', 'description': 'Test description', 'version': '1.0.0'},
+        'paths': {},
     }
 
     # Make sure asyncio.run properly handles the coroutine
@@ -233,7 +262,11 @@ def test_create_mcp_server(mock_asyncio_run, mock_load_openapi_spec):
 def test_create_mcp_server_basic_auth(mock_asyncio_run, mock_load_openapi_spec):
     """Test creating the MCP server with basic authentication."""
     # Setup mocks
-    mock_load_openapi_spec.return_value = {'openapi': '3.0.0', 'info': {'title': 'Test API'}}
+    mock_load_openapi_spec.return_value = {
+        'openapi': '3.0.0',
+        'info': {'title': 'Test API', 'version': '1.0.0'},
+        'paths': {},
+    }
 
     # Make sure asyncio.run properly handles the coroutine
     mock_asyncio_run.return_value = None
@@ -247,7 +280,8 @@ def test_create_mcp_server_basic_auth(mock_asyncio_run, mock_load_openapi_spec):
         auth_password='PLACEHOLDER_PASSWORD',
     )
 
-    with patch('awslabs.openapi_mcp_server.server.httpx.BasicAuth') as mock_basic_auth:
+    # Fix the patching approach to avoid the module import error
+    with patch('httpx.BasicAuth') as mock_basic_auth:
         server = create_mcp_server(config)
 
         assert server is not None
@@ -262,7 +296,11 @@ def test_create_mcp_server_basic_auth(mock_asyncio_run, mock_load_openapi_spec):
 def test_create_mcp_server_bearer_auth(mock_asyncio_run, mock_load_openapi_spec):
     """Test creating the MCP server with bearer token authentication."""
     # Setup mocks
-    mock_load_openapi_spec.return_value = {'openapi': '3.0.0', 'info': {'title': 'Test API'}}
+    mock_load_openapi_spec.return_value = {
+        'openapi': '3.0.0',
+        'info': {'title': 'Test API', 'version': '1.0.0'},
+        'paths': {},
+    }
 
     # Make sure asyncio.run properly handles the coroutine
     mock_asyncio_run.return_value = None

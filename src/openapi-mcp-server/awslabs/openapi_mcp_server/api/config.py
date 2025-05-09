@@ -32,6 +32,7 @@ class Config:
     debug: bool = False
     transport: str = 'stdio'  # stdio, sse
     message_timeout: int = 60
+    version: str = '0.1.0'
 
 
 def load_config(args: Any = None) -> Config:
@@ -113,6 +114,39 @@ def load_config(args: Any = None) -> Config:
         if hasattr(args, 'sse') and args.sse:
             logger.debug('Setting transport to SSE from arguments')
             config.transport = 'sse'
+
+        if hasattr(args, 'debug') and args.debug:
+            logger.debug('Setting debug mode from arguments')
+            config.debug = True
+
+        # Authentication arguments
+        if hasattr(args, 'auth_type') and args.auth_type:
+            logger.debug(f'Setting auth type from arguments: {args.auth_type}')
+            config.auth_type = args.auth_type
+
+        if hasattr(args, 'auth_username') and args.auth_username:
+            logger.debug('Setting auth username from arguments')
+            config.auth_username = args.auth_username
+
+        if hasattr(args, 'auth_password') and args.auth_password:
+            logger.debug('Setting auth password from arguments')
+            config.auth_password = args.auth_password
+
+        if hasattr(args, 'auth_token') and args.auth_token:
+            logger.debug('Setting auth token from arguments')
+            config.auth_token = args.auth_token
+
+        if hasattr(args, 'auth_api_key') and args.auth_api_key:
+            logger.debug('Setting auth API key from arguments')
+            config.auth_api_key = args.auth_api_key
+
+        if hasattr(args, 'auth_api_key_name') and args.auth_api_key_name:
+            logger.debug(f'Setting auth API key name from arguments: {args.auth_api_key_name}')
+            config.auth_api_key_name = args.auth_api_key_name
+
+        if hasattr(args, 'auth_api_key_in') and args.auth_api_key_in:
+            logger.debug(f'Setting auth API key location from arguments: {args.auth_api_key_in}')
+            config.auth_api_key_in = args.auth_api_key_in
 
     # Log final configuration details
     logger.info(

@@ -10,6 +10,9 @@ This project is a server that dynamically creates Machine Conversation Protocol 
 - **Flexible Configuration**: Configure via environment variables or command line arguments
 - **OpenAPI Support**: Works with OpenAPI 3.x specifications in JSON or YAML format
 - **Authentication Support**: Supports multiple authentication methods (Basic, Bearer Token, API Key)
+- **AWS Best Practices**: Implements AWS best practices for caching, resilience, and observability
+- **Comprehensive Testing**: Includes extensive unit and integration tests with high code coverage
+- **Metrics Collection**: Tracks API calls, tool usage, errors, and performance metrics
 
 ## Installation
 
@@ -124,102 +127,69 @@ export AUTH_API_KEY_NAME="X-API-Key"  # Name of the API key (default: api_key)
 export AUTH_API_KEY_IN="header"  # Where to place the API key (options: header, query, cookie)
 ```
 
-## Testing
+## AWS Best Practices
 
-### Functional Testing with Petstore API
+The OpenAPI MCP Server implements AWS best practices for building resilient, observable, and efficient cloud applications. These include:
 
-The project includes a comprehensive functional test for verifying integration with the Swagger Petstore API. This test analyzes the Petstore API structure, lists all available tools and resources, and verifies server startup.
+- **Caching**: Robust caching system with multiple backend options
+- **Resilience**: Patterns to handle transient failures and ensure high availability
+- **Observability**: Comprehensive monitoring, metrics, and logging features
 
-To run the functional test:
+For detailed information about these features, including implementation details and configuration options, see [AWS_BEST_PRACTICES.md](AWS_BEST_PRACTICES.md).
+
+## Docker Deployment
+
+The project includes a Dockerfile for containerized deployment. To build and run:
 
 ```bash
-# Run the Petstore API functional test
-./run_petstore_test.sh
+# Build the Docker image
+docker build -t openapi-mcp-server:latest .
 
-# For verbose output
-./run_petstore_test.sh --verbose
+# Run with default settings
+docker run -p 8000:8000 openapi-mcp-server:latest
 
-# To use a custom port
-./run_petstore_test.sh --port 9000
-
-# Keep the generated test script
-./run_petstore_test.sh --keep-script
+# Run with custom configuration
+docker run -p 8000:8000 \
+  -e API_NAME=myapi \
+  -e API_BASE_URL=https://api.example.com \
+  -e API_SPEC_URL=https://api.example.com/openapi.json \
+  -e SERVER_TRANSPORT=sse \
+  openapi-mcp-server:latest
 ```
 
-The functional test performs the following:
+For detailed information about Docker deployment, AWS service integration, and SSE transport considerations, see the [DEPLOYMENT.md](DEPLOYMENT.md) file.
 
-1. **API Structure Analysis**: Analyzes the OpenAPI specification and provides a detailed breakdown of:
-   - All API endpoints grouped by category (pet, store, user)
-   - Expected MCP tools to be created from operations
-   - Potential MCP resources (GET endpoints without parameters)
+## Testing
 
-2. **Detailed Tool Listing**: Lists all tools that would be created by category, including:
-   - Tool name (operationId)
-   - HTTP method and path
-   - Description summary
+The project includes a comprehensive test suite covering unit tests, integration tests, and API functionality tests.
 
-3. **Server Startup Test**: Verifies that the server can start successfully with the Petstore API configuration
+### Running Tests
 
-Example output:
+```bash
+# Install test dependencies
+pip install "awslabs.openapi-mcp-server[test]"
 
-```
-📊 ANALYZING PETSTORE API ENDPOINTS...
-============================================================
-Fetching Petstore OpenAPI spec from https://petstore3.swagger.io/api/v3/openapi.json
+# Run all tests
+pytest
 
-📌 Found 13 unique API paths
-📌 Found 19 operations that will be converted to MCP tools
-📌 Found 3 potential resources (GET endpoints)
+# Run tests with coverage
+pytest --cov=awslabs
 
-🔧 TOOLS BY CATEGORY:
-============================================================
-
-[PET] - 9 tools:
-  • addPet                   - POST /pet - Add a new pet to the store
-  • deletePet                - DELETE /pet/{petId} - Deletes a pet
-  • findPetsByStatus         - GET /pet/findByStatus - Finds Pets by status
-  • findPetsByTags           - GET /pet/findByTags - Finds Pets by tags
-  • getPetById               - GET /pet/{petId} - Find pet by ID
-  • updatePet                - PUT /pet - Update an existing pet
-  • updatePetWithForm        - POST /pet/{petId} - Updates a pet in the store with form data
-  • uploadFile               - POST /pet/{petId}/uploadImage - uploads an image
-
-[STORE] - 4 tools:
-  • deleteOrder              - DELETE /store/order/{orderId} - Delete purchase order by ID
-  • getInventory             - GET /store/inventory - Returns pet inventories by status
-  • getOrderById             - GET /store/order/{orderId} - Find purchase order by ID
-  • placeOrder               - POST /store/order - Place an order for a pet
-
-[USER] - 6 tools:
-  • createUser               - POST /user - Create user
-  • createUsersWithArray     - POST /user/createWithArray - Creates list of users with given input array
-  • createUsersWithList      - POST /user/createWithList - Creates list of users with given input array
-  • deleteUser               - DELETE /user/{username} - Delete user
-  • getUserByName            - GET /user/{username} - Get user by user name
-  • loginUser                - GET /user/login - Logs user into the system
-  • logoutUser               - GET /user/logout - Logs out current logged in user session
-  • updateUser               - PUT /user/{username} - Updated user
-
-📚 POTENTIAL RESOURCES:
-============================================================
-  • getInventory             - /store/inventory
-  • loginUser                - /user/login
-  • logoutUser               - /user/logout
+# Run specific test modules
+pytest tests/api/
+pytest tests/utils/
 ```
 
-The test also provides a final summary report:
+The test suite covers:
 
-```
-🔍 PETSTORE API FUNCTIONAL TEST REPORT
-============================================================
-✅ Server startup: SUCCESS
-📊 API paths: 13
-📊 Total tools (operations): 19
-📊 Potential resources: 3
-⚠️ Errors encountered: 0
-⏱️ Test duration: 5.03 seconds
-============================================================
-```
+1. **API Configuration**: Tests for API configuration handling and validation
+2. **API Discovery**: Tests for API endpoint discovery and tool generation
+3. **Caching**: Tests for the caching system and providers
+4. **HTTP Client**: Tests for the HTTP client with resilience features
+5. **Metrics**: Tests for metrics collection and reporting
+6. **OpenAPI Validation**: Tests for OpenAPI specification validation
+
+For more information about the test structure and strategy, see the [tests/README.md](tests/README.md) file.
 
 ## Instructions
 

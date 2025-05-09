@@ -47,4 +47,27 @@ def get_caller_info():
     return f'{caller_info.filename}:{caller_info.function}:{caller_info.lineno}'
 
 
-__all__ = ['__version__', 'logger', 'get_caller_info']
+# Define custom tool registration function
+def register_custom_tool(server, tool_func, name=None, description=None):
+    """Register a custom tool with the MCP server.
+
+    Args:
+        server: The MCP server
+        tool_func: The function to register as a tool
+        name: Optional name for the tool (defaults to function name)
+        description: Optional description for the tool
+    """
+    try:
+        server.add_tool(
+            tool_func,
+            name=name or tool_func.__name__,
+            description=description or tool_func.__doc__,
+        )
+        logger.info(f'Registered custom tool: {name or tool_func.__name__}')
+        return True
+    except Exception as e:
+        logger.error(f'Failed to register tool {name or tool_func.__name__}: {e}')
+        return False
+
+
+__all__ = ['__version__', 'logger', 'get_caller_info', 'register_custom_tool']

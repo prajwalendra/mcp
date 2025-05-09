@@ -2,11 +2,15 @@
 
 import httpx
 import json
-from awslabs.openapi_mcp_server import get_caller_info, logger
+import time
+from awslabs.openapi_mcp_server import logger
+from awslabs.openapi_mcp_server.utils.cache_provider import cached
+from awslabs.openapi_mcp_server.utils.openapi_validator import validate_openapi_spec
 from pathlib import Path
 from typing import Any, Dict
 
 
+@cached(ttl_seconds=3600)  # Cache OpenAPI specs for 1 hour
 def load_openapi_spec(url: str = '', path: str = '') -> Dict[str, Any]:
     """Load an OpenAPI specification from a URL or file path.
 
@@ -21,19 +25,37 @@ def load_openapi_spec(url: str = '', path: str = '') -> Dict[str, Any]:
         ValueError: If neither url nor path are provided
         FileNotFoundError: If the file at path does not exist
     """
-    caller_info = get_caller_info()
-
     if not url and not path:
-        logger.error(f'Neither URL nor path provided (called from {caller_info})')
+        logger.error('Neither URL nor path provided')
         raise ValueError('Either url or path must be provided')
 
     # Load from URL
     if url:
         logger.info(f'Fetching OpenAPI spec from URL: {url}')
         try:
-            response = httpx.get(url)
-            response.raise_for_status()
-            return response.json()
+            # Use retry logic for network resilience
+            for attempt in range(3):
+                try:
+                    response = httpx.get(url, timeout=10.0)
+                    response.raise_for_status()
+                    spec = response.json()
+
+                    # Validate the spec
+                    if validate_openapi_spec(spec):
+                        return spec
+                    else:
+                        raise ValueError('Invalid OpenAPI specification')
+
+                except (httpx.TimeoutException, httpx.HTTPError) as e:
+                    if attempt < 2:  # Don't log on the last attempt
+                        logger.warning(f'Attempt {attempt + 1} failed: {e}. Retrying...')
+                        time.sleep(1 * (2**attempt))  # Exponential backoff
+                    else:
+                        raise
+
+            # This will only be reached if all retries fail and no exception is raised
+            raise httpx.HTTPError('All retry attempts failed')
+
         except Exception as e:
             logger.error(f'Failed to fetch OpenAPI spec from URL: {url} - Error: {e}')
             raise
@@ -51,13 +73,13 @@ def load_openapi_spec(url: str = '', path: str = '') -> Dict[str, Any]:
                 content = f.read()
                 # Try to parse as JSON first
                 try:
-                    return json.loads(content)
+                    spec = json.loads(content)
                 except json.JSONDecodeError:
                     # If it's not JSON, try to parse as YAML
                     try:
                         import yaml
 
-                        return yaml.safe_load(content)
+                        spec = yaml.safe_load(content)
                     except ImportError:
                         logger.error('YAML parsing requires pyyaml to be installed')
                         raise ImportError(
@@ -68,9 +90,16 @@ def load_openapi_spec(url: str = '', path: str = '') -> Dict[str, Any]:
                             f'Failed to parse OpenAPI spec file as YAML: {path} - Error: {e}'
                         )
                         raise
+
+                # Validate the spec
+                if validate_openapi_spec(spec):
+                    return spec
+                else:
+                    raise ValueError('Invalid OpenAPI specification')
+
         except Exception as e:
             logger.error(f'Failed to load OpenAPI spec from file: {path} - Error: {e}')
             raise
 
-    # This should not happen, but just in case
+    # This should never be reached
     raise ValueError('Either url or path must be provided')
