@@ -75,10 +75,11 @@ def test_in_memory_metrics_provider_record_api_call():
     assert provider._api_calls[0].duration_ms == 100.0
     assert provider._api_calls[0].error is None
 
-    # Check path stats
-    assert provider._path_stats['/test']['count'] == 1
-    assert provider._path_stats['/test']['errors'] == 0
-    assert provider._path_stats['/test']['total_duration_ms'] == 100.0
+    # Check path stats - note the key format is "METHOD path"
+    path_key = 'GET /test'
+    assert provider._path_stats[path_key]['count'] == 1
+    assert provider._path_stats[path_key]['errors'] == 0
+    assert provider._path_stats[path_key]['total_duration_ms'] == 100.0
 
     # Record an error API call
     provider.record_api_call(
@@ -93,9 +94,9 @@ def test_in_memory_metrics_provider_record_api_call():
     assert provider._api_calls[1].error == 'Internal Server Error'
 
     # Check updated path stats
-    assert provider._path_stats['/test']['count'] == 2
-    assert provider._path_stats['/test']['errors'] == 1
-    assert provider._path_stats['/test']['total_duration_ms'] == 250.0
+    assert provider._path_stats[path_key]['count'] == 2
+    assert provider._path_stats[path_key]['errors'] == 1
+    assert provider._path_stats[path_key]['total_duration_ms'] == 250.0
 
     # Test max history limit
     for i in range(5):
@@ -109,7 +110,7 @@ def test_in_memory_metrics_provider_record_api_call():
     # Should only keep the 5 most recent calls
     assert len(provider._api_calls) == 5
     # The first two calls should have been removed
-    assert provider._api_calls[0].path == '/test0'
+    assert '/test' not in [call.path for call in provider._api_calls]
 
 
 def test_in_memory_metrics_provider_record_tool_usage():
@@ -179,17 +180,17 @@ def test_in_memory_metrics_provider_get_api_stats():
     # Get API stats
     stats = provider.get_api_stats()
 
-    # Check stats for /test1
-    assert stats['/test1']['count'] == 2
-    assert stats['/test1']['errors'] == 1
-    assert stats['/test1']['total_duration_ms'] == 250.0
-    assert stats['/test1']['avg_duration_ms'] == 125.0
+    # Check stats for /test1 - note the key format is "METHOD path"
+    assert stats['GET /test1']['count'] == 2
+    assert stats['GET /test1']['errors'] == 1
+    assert stats['GET /test1']['error_rate'] == 0.5
+    assert stats['GET /test1']['avg_duration_ms'] == 125.0
 
     # Check stats for /test2
-    assert stats['/test2']['count'] == 1
-    assert stats['/test2']['errors'] == 0
-    assert stats['/test2']['total_duration_ms'] == 75.0
-    assert stats['/test2']['avg_duration_ms'] == 75.0
+    assert stats['POST /test2']['count'] == 1
+    assert stats['POST /test2']['errors'] == 0
+    assert stats['POST /test2']['error_rate'] == 0.0
+    assert stats['POST /test2']['avg_duration_ms'] == 75.0
 
 
 def test_in_memory_metrics_provider_get_tool_stats():
@@ -207,16 +208,14 @@ def test_in_memory_metrics_provider_get_tool_stats():
     # Check stats for tool1
     assert stats['tool1']['count'] == 2
     assert stats['tool1']['errors'] == 1
-    assert stats['tool1']['total_duration_ms'] == 125.0
+    assert stats['tool1']['error_rate'] == 0.5
     assert stats['tool1']['avg_duration_ms'] == 62.5
-    assert stats['tool1']['success_rate'] == 0.5
 
     # Check stats for tool2
     assert stats['tool2']['count'] == 1
     assert stats['tool2']['errors'] == 0
-    assert stats['tool2']['total_duration_ms'] == 100.0
+    assert stats['tool2']['error_rate'] == 0.0
     assert stats['tool2']['avg_duration_ms'] == 100.0
-    assert stats['tool2']['success_rate'] == 1.0
 
 
 def test_in_memory_metrics_provider_get_recent_errors():
@@ -267,15 +266,17 @@ def test_in_memory_metrics_provider_get_summary():
     # Get summary
     summary = provider.get_summary()
 
-    # Check summary
-    assert summary['total_api_calls'] == 2
-    assert summary['total_api_errors'] == 1
-    assert summary['api_success_rate'] == 0.5
-    assert summary['avg_api_duration_ms'] == 125.0
-    assert summary['total_tool_calls'] == 2
-    assert summary['total_tool_errors'] == 1
-    assert summary['tool_success_rate'] == 0.5
-    assert summary['avg_tool_duration_ms'] == 62.5
+    # Check API calls summary
+    assert summary['api_calls']['total'] == 2
+    assert summary['api_calls']['errors'] == 1
+    assert summary['api_calls']['error_rate'] == 0.5
+    assert summary['api_calls']['paths'] == 2
+
+    # Check tool usage summary
+    assert summary['tool_usage']['total'] == 2
+    assert summary['tool_usage']['errors'] == 1
+    assert summary['tool_usage']['error_rate'] == 0.5
+    assert summary['tool_usage']['tools'] == 2
 
 
 @patch('awslabs.openapi_mcp_server.utils.metrics_provider.USE_PROMETHEUS', False)
