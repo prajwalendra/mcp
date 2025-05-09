@@ -159,16 +159,27 @@ async def get_api_stats() -> ApiStats:
     Returns:
         ApiStats: Statistics about API usage
     """
-    summary = metrics.get_summary()
-    api_calls = summary['api_calls']
-
-    return ApiStats(
-        total_calls=api_calls['total'],
-        error_count=api_calls['errors'],
-        error_rate=api_calls['error_rate'],
-        unique_paths=api_calls['paths'],
-        recent_errors=metrics.get_recent_errors(limit=5),
-    )
+    try:
+        summary = metrics.get_summary()
+        api_calls = summary.get('api_calls', {})
+        
+        return ApiStats(
+            total_calls=api_calls.get('total', 0),
+            error_count=api_calls.get('errors', 0),
+            error_rate=api_calls.get('error_rate', 0.0),
+            unique_paths=api_calls.get('paths', 0),
+            recent_errors=metrics.get_recent_errors(limit=5),
+        )
+    except Exception as e:
+        logger.warning(f"Error getting API stats: {e}")
+        # Return default values if there's an error
+        return ApiStats(
+            total_calls=0,
+            error_count=0,
+            error_rate=0.0,
+            unique_paths=0,
+            recent_errors=[],
+        )
 
 
 def register_discovery_tools(
