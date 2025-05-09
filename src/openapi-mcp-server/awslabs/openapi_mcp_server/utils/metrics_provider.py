@@ -378,10 +378,27 @@ class PrometheusMetricsProvider(MetricsProvider):
         """Get statistics for tool usage.
 
         Note: This is a limited implementation since Prometheus doesn't provide
-        a way to query metrics directly. We return an empty dict.
+        a way to query metrics directly. We return a default dict with empty values
+        to prevent errors in consumers.
         """
-        logger.warning('Tool stats not available with Prometheus metrics provider')
-        return {}
+        # Instead of just returning an empty dict and logging a warning,
+        # return a defaultdict that will provide empty values for any key
+        from collections import defaultdict
+        
+        # Create a nested defaultdict that returns default values for any key
+        def nested_dict():
+            return {
+                'count': 0,
+                'errors': 0,
+                'error_rate': 0.0,
+                'avg_duration_ms': 0.0
+            }
+            
+        result = defaultdict(nested_dict)
+        
+        # Log at debug level instead of warning to avoid filling logs
+        logger.debug('Detailed tool stats not available with Prometheus metrics provider')
+        return result
 
     def get_recent_errors(self, limit: int = 10) -> List[Dict[str, Any]]:
         """Get recent API call errors."""

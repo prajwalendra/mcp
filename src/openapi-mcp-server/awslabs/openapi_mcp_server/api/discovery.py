@@ -5,7 +5,7 @@ from awslabs.openapi_mcp_server.utils.metrics_provider import metrics
 from awslabs.openapi_mcp_server.utils.openapi_validator import extract_api_structure
 from mcp.server.fastmcp import FastMCP
 from pydantic import BaseModel, Field
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 
 class ApiInfo(BaseModel):
@@ -88,64 +88,85 @@ async def get_api_tools(server: FastMCP, api_name: str) -> List[ToolInfo]:
     # Get all tools for this API
     try:
         all_tools = await server.get_tools()
-        api_tools = [tool for tool in all_tools.values() if isinstance(tool.name, str) and tool.name.startswith(f'{api_name}_')]
+        
+        # Defensive programming: check if all_tools is None or not a dict
+        if not all_tools or not isinstance(all_tools, dict):
+            logger.warning(f"Invalid tools data returned: {type(all_tools)}")
+            return tools
+            
+        # Filter tools that match our API name prefix
+        api_tools = []
+        for tool_key, tool in all_tools.items():
+            # Check if the tool has a name attribute and it's a string
+            if hasattr(tool, 'name') and isinstance(tool.name, str) and tool.name.startswith(f'{api_name}_'):
+                api_tools.append(tool)
+            # If tool itself is a string (shouldn't happen but just in case)
+            elif isinstance(tool, str) and tool.startswith(f'{api_name}_'):
+                logger.debug(f"Found tool as string: {tool}")
+                # Skip this tool as we can't extract more info
+                continue
 
         # Get tool stats
         tool_stats = metrics.get_tool_stats()
 
         for tool in api_tools:
-            # Extract method and path from description
-            method = 'GET'  # Default
-            path = ''
-            if isinstance(tool.description, str):
-                description_lines = tool.description.split('\n')
-                for line in description_lines:
-                    if line.startswith('HTTP'):
-                        parts = line.split(' ', 2)
-                        if len(parts) >= 2:
-                            method = parts[1]
-                        if len(parts) >= 3:
-                            path = parts[2]
-                        break
+            try:
+                # Extract method and path from description
+                method = 'GET'  # Default
+                path = ''
+                if hasattr(tool, 'description') and isinstance(tool.description, str):
+                    description_lines = tool.description.split('\n')
+                    for line in description_lines:
+                        if line.startswith('HTTP'):
+                            parts = line.split(' ', 2)
+                            if len(parts) >= 2:
+                                method = parts[1]
+                            if len(parts) >= 3:
+                                path = parts[2]
+                            break
 
-            # Get parameters
-            parameters = []
-            if hasattr(tool, 'parameters') and tool.parameters:
-                for param in tool.parameters:
-                    if hasattr(param, 'name'):
-                        param_info = {
-                            'name': param.name,
-                            'type': str(getattr(param, 'type', 'unknown')),
-                            'required': getattr(param, 'required', False),
-                            'description': getattr(param, 'description', ''),
-                        }
-                        parameters.append(param_info)
+                # Get parameters
+                parameters = []
+                if hasattr(tool, 'parameters') and tool.parameters:
+                    for param in tool.parameters:
+                        if hasattr(param, 'name'):
+                            param_info = {
+                                'name': param.name,
+                                'type': str(getattr(param, 'type', 'unknown')),
+                                'required': getattr(param, 'required', False),
+                                'description': getattr(param, 'description', ''),
+                            }
+                            parameters.append(param_info)
 
-            # Get usage stats
-            stats = tool_stats.get(tool.name, {}) if isinstance(tool.name, str) else {}
-            usage_count = stats.get('count', 0)
-            error_rate = stats.get('error_rate', 0.0)
-            avg_duration_ms = stats.get('avg_duration_ms', 0.0)
+                # Get usage stats - ensure tool.name is a string
+                tool_name = tool.name if hasattr(tool, 'name') and isinstance(tool.name, str) else str(tool)
+                stats = tool_stats.get(tool_name, {})
+                usage_count = stats.get('count', 0)
+                error_rate = stats.get('error_rate', 0.0)
+                avg_duration_ms = stats.get('avg_duration_ms', 0.0)
 
-            # Get first line of description or use empty string if description is not a string
-            first_line = ''
-            if isinstance(tool.description, str):
-                description_parts = tool.description.split('\n')
-                if description_parts:
-                    first_line = description_parts[0]
+                # Get first line of description or use empty string if description is not a string
+                first_line = ''
+                if hasattr(tool, 'description') and isinstance(tool.description, str):
+                    description_parts = tool.description.split('\n')
+                    if description_parts:
+                        first_line = description_parts[0]
 
-            tools.append(
-                ToolInfo(
-                    name=tool.name,
-                    description=first_line,
-                    method=method,
-                    path=path,
-                    parameters=parameters,
-                    usage_count=usage_count,
-                    error_rate=error_rate,
-                    avg_duration_ms=avg_duration_ms,
+                tools.append(
+                    ToolInfo(
+                        name=tool_name,
+                        description=first_line,
+                        method=method,
+                        path=path,
+                        parameters=parameters,
+                        usage_count=usage_count,
+                        error_rate=error_rate,
+                        avg_duration_ms=avg_duration_ms,
+                    )
                 )
-            )
+            except Exception as e:
+                logger.warning(f"Error processing tool {getattr(tool, 'name', 'unknown')}: {e}")
+                continue
 
     except Exception as e:
         logger.warning(f'Error getting tools: {e}')
