@@ -7,10 +7,10 @@ from typing import Any, Dict, List, Tuple
 
 # Try to import Prompt from different locations
 try:
-    from mcp.prompts import Prompt
+    from mcp.prompts import Prompt  # type: ignore
 except ImportError:
     try:
-        from fastmcp.prompts.prompt import Prompt
+        from fastmcp.prompts.prompt import Prompt  # type: ignore
     except ImportError:
         # Define a simple Prompt class if neither is available
         class Prompt:
