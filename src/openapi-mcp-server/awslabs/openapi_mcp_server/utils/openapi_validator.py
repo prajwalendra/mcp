@@ -70,7 +70,7 @@ def validate_openapi_spec(spec: Dict[str, Any]) -> bool:
             # For newer versions of openapi-core
             elif hasattr(openapi_core, 'OpenAPISpec'):
                 # Ignore type error since we're checking dynamically
-                openapi_core.OpenAPISpec.create(spec)  # type: ignore
+                getattr(openapi_core, 'OpenAPISpec').create(spec)  # type: ignore
             else:
                 logger.warning('Unsupported openapi-core version - skipping additional validation')
             logger.debug('OpenAPI spec validated with openapi-core')
