@@ -6,10 +6,8 @@ import signal
 import sys
 
 # Import from our modules - use direct imports from sub-modules for better patching in tests
-from awslabs.openapi_mcp_server import logger, register_custom_tool
+from awslabs.openapi_mcp_server import logger
 from awslabs.openapi_mcp_server.api.config import Config, load_config
-from awslabs.openapi_mcp_server.api.discovery import register_discovery_tools
-from awslabs.openapi_mcp_server.prompts.instructions import generate_api_instructions
 from awslabs.openapi_mcp_server.utils.http_client import HttpClientFactory, make_request_with_retry
 from awslabs.openapi_mcp_server.utils.metrics_provider import metrics
 from awslabs.openapi_mcp_server.utils.openapi import load_openapi_spec
@@ -120,37 +118,34 @@ def create_mcp_server(config: Config) -> FastMCP:
         server = FastMCP.from_openapi(openapi_spec=openapi_spec, client=client)
         logger.info(f'Successfully configured {config.api_name} API')
 
-        # Register discovery tools
-        # Ignore type error since FastMCPOpenAPI is compatible with FastMCP in practice
-        register_discovery_tools(server, config.api_name, openapi_spec, config.api_base_url)  # type: ignore
-        logger.info(f'Registered discovery tools for {config.api_name} API')
-
-        # Generate dynamic instructions
-        logger.info(f'Generating instructions for API: {config.api_name}')
-        # Ignore type error since FastMCPOpenAPI is compatible with FastMCP in practice
-        asyncio.run(generate_api_instructions(server, config.api_name, openapi_spec))  # type: ignore
-
-        # Generate enhanced instructions
-        try:
-            from awslabs.openapi_mcp_server.prompts.enhanced_instructions import (
-                generate_enhanced_api_instructions,
-            )
-
-            logger.info(f'Generating enhanced instructions for API: {config.api_name}')
-            asyncio.run(generate_enhanced_api_instructions(server, config.api_name, openapi_spec))  # type: ignore
-        except Exception as e:
-            logger.warning(f'Failed to generate enhanced instructions: {e}')
-            
         # Generate operation-specific prompts
         try:
             from awslabs.openapi_mcp_server.prompts.operation_instructions import (
                 generate_operation_prompts,
             )
-            
-            logger.info(f'Generating operation-specific prompts for API: {config.api_name}')
+
+            logger.info(f'Generating prompts for API: {config.api_name}')
+            # Run the async function
             asyncio.run(generate_operation_prompts(server, config.api_name, openapi_spec))  # type: ignore
+
+            # Log the number of prompts after generation
+            prompt_count = (
+                len(server._prompt_manager._prompts)
+                if hasattr(server, '_prompt_manager')
+                and hasattr(server._prompt_manager, '_prompts')
+                else 0
+            )
+            logger.info(f'Total prompts after generation: {prompt_count}')
+
+            # Log the names of all prompts
+            if prompt_count > 0:
+                prompt_names = list(server._prompt_manager._prompts.keys())
+                logger.info(f'Prompt names: {prompt_names}')
         except Exception as e:
             logger.warning(f'Failed to generate operation-specific prompts: {e}')
+            import traceback
+
+            logger.warning(f'Traceback: {traceback.format_exc()}')
 
         # Register health check tool
         async def health_check() -> Dict[str, Any]:
@@ -194,15 +189,35 @@ def create_mcp_server(config: Config) -> FastMCP:
                 'metrics': summary,
             }
 
-        register_custom_tool(
-            server,
-            health_check,
-            name='healthCheck',
-            description='Check the health of the server and API',
-        )
-
     except Exception as e:
         logger.error(f'Error setting up API: {e}')
+
+    # Log summary of registered components
+    tool_count = len(server._tools) if hasattr(server, '_tools') else 0  # type: ignore
+    resource_count = len(server._resources) if hasattr(server, '_resources') else 0  # type: ignore
+    prompt_count = (
+        len(server._prompt_manager._prompts)
+        if hasattr(server, '_prompt_manager') and hasattr(server._prompt_manager, '_prompts')
+        else 0
+    )
+
+    logger.info('Server initialization complete with:')
+    logger.info(f'- {tool_count} tools registered')
+    logger.info(f'- {resource_count} resources registered')
+    logger.info(f'- {prompt_count} prompts registered')
+
+    # Log details of registered components
+    if tool_count > 0 and hasattr(server, '_tools'):
+        tool_names = list(server._tools.keys())  # type: ignore
+        logger.info(f'Registered tools: {tool_names}')
+
+    if (
+        prompt_count > 0
+        and hasattr(server, '_prompt_manager')
+        and hasattr(server._prompt_manager, '_prompts')
+    ):
+        prompt_names = list(server._prompt_manager._prompts.keys())
+        logger.info(f'Registered prompts: {prompt_names}')
 
     return server
 

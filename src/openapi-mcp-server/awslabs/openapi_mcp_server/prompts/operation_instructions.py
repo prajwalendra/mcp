@@ -23,18 +23,6 @@ except ImportError:
                 """Create a simple prompt from a function."""
                 return {'fn': fn, 'name': name, 'description': description}
 
-            def __init__(self, name: str, description: str, content: str):
-                """Initialize a CustomPrompt.
-
-                Args:
-                    name: The name of the prompt
-                    description: A description of the prompt
-                    content: The prompt content
-                """
-                self.name = name
-                self.description = description
-                self.content = content
-
 
 def get_required_parameters(operation: Dict[str, Any]) -> List[Dict[str, Any]]:
     """Get required parameters from an operation.
@@ -127,7 +115,11 @@ def generate_simple_prompt(
     for field in required_fields:
         prompt_parts.append(f'The {field} is {{{field}}}.')
 
-    return ' '.join(prompt_parts)
+    # Add operation ID for debugging
+    prompt = ' '.join(prompt_parts)
+    logger.debug(f'Generated prompt for {operation_id}: {prompt}')
+
+    return prompt
 
 
 async def generate_operation_prompts(
@@ -158,6 +150,10 @@ async def generate_operation_prompts(
 
     # Extract paths and operations from the spec
     paths = openapi_spec.get('paths', {})
+    if not paths:
+        logger.warning(f'No paths found in OpenAPI spec for {api_name}')
+        return
+
     components = openapi_spec.get('components', {})
 
     # Track created prompts
@@ -178,6 +174,8 @@ async def generate_operation_prompts(
                 continue
 
             try:
+                logger.debug(f'Generating prompt for operation: {operation_id}')
+
                 # Generate a simple prompt for this operation
                 prompt_content = generate_simple_prompt(
                     operation_id=operation_id,
@@ -187,22 +185,31 @@ async def generate_operation_prompts(
                     components=components,
                 )
 
-                # Create a prompt function
-                def prompt_fn():
-                    return [{'role': 'user', 'content': prompt_content}]
+                logger.debug(f'Generated prompt content for {operation_id}: {prompt_content}')
+
+                # Create a prompt function with proper closure
+                def prompt_fn(content=prompt_content):
+                    return [{'role': 'user', 'content': content}]
+
+                prompt_name = f'{api_name}_{operation_id}_prompt'
 
                 # Create and add the prompt
                 prompt = Prompt.from_function(
                     fn=prompt_fn,
-                    name=f'{api_name}_{operation_id}_prompt',
+                    name=prompt_name,
                     description=f'Simple prompt for {operation_id} operation',
                 )
 
                 # Add to server
                 server._prompt_manager.add_prompt(prompt)  # type: ignore
-                created_prompts.append(f'{api_name}_{operation_id}_prompt')
-                logger.info(f'Added operation prompt: {api_name}_{operation_id}_prompt')
+                created_prompts.append(prompt_name)
+                logger.info(
+                    f'Added operation prompt: {prompt_name} with content: {prompt_content}'
+                )
             except Exception as e:
                 logger.warning(f'Failed to generate prompt for {operation_id}: {e}')
+                import traceback
+
+                logger.debug(f'Traceback: {traceback.format_exc()}')
 
     logger.info(f'Created {len(created_prompts)} operation-specific prompts')
