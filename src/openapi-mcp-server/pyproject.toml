@@ -1,6 +1,6 @@
 [project]
 name = "awslabs.openapi-mcp-server"
-version = "0.0.0"
+version = "0.1.0"
 description = "This project is a server that dynamically creates Machine Conversation Protocol (MCP) tools and resources from OpenAPI specifications. It allows Large Language Models (LLMs) to interact with APIs through the Machine Conversation Protocol."
 readme = "README.md"
 requires-python = ">=3.10"
