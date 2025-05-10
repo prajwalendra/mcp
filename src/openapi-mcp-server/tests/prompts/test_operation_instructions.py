@@ -97,9 +97,12 @@ def test_generate_simple_prompt_no_summary():
 @pytest.mark.asyncio
 async def test_generate_operation_prompts():
     """Test generating operation prompts."""
+    # Create a server mock that properly simulates FastMCP behavior
     server = MagicMock()
-    server.add_prompt = MagicMock()
-
+    
+    # Set up the add_prompt_from_fn method which is what our code will try to use first
+    server.add_prompt_from_fn = MagicMock()
+    
     openapi_spec = {
         'paths': {
             '/pet/{petId}': {
@@ -127,18 +130,20 @@ async def test_generate_operation_prompts():
 
     await generate_operation_prompts(server, 'petstore', openapi_spec)
 
-    # Check that prompts were added
-    assert server.add_prompt.call_count == 2
-
-    # Check that the first call was with a prompt object
-    args, kwargs = server.add_prompt.call_args_list[0]
-    assert len(args) == 1
-    # Check prompt properties
-    assert hasattr(args[0], 'name')
-    assert hasattr(args[0], 'description')
-    # The Prompt object doesn't have a content attribute directly
-    # Instead, we can check the name matches what we expect
-    assert args[0].name == 'petstore_getPetById_prompt'
+    # Check that prompts were added using add_prompt_from_fn
+    assert server.add_prompt_from_fn.call_count == 2
+    
+    # Check the first call arguments
+    args, kwargs = server.add_prompt_from_fn.call_args_list[0]
+    assert kwargs['name'] == 'petstore_getPetById_prompt'
+    assert kwargs['description'] == 'Simple prompt for getPetById operation'
+    assert callable(kwargs['fn'])
+    
+    # Check the second call arguments
+    args, kwargs = server.add_prompt_from_fn.call_args_list[1]
+    assert kwargs['name'] == 'petstore_addPet_prompt'
+    assert kwargs['description'] == 'Simple prompt for addPet operation'
+    assert callable(kwargs['fn'])
 
 
 @pytest.mark.asyncio
