@@ -194,3 +194,70 @@ For more information about the test structure and strategy, see the [tests/READM
 ## Instructions
 
 This server acts as a bridge between OpenAPI specifications and LLMs, allowing models to have a better understanding of available API capabilities without requiring manual tool definitions. The server creates structured MCP tools that LLMs can use to understand and interact with your API endpoints, parameters, and response formats. Point the server to your API by providing: API name, API base URL and Auth Details, OpenAPI specification URL or local file path. Set up appropriate authentication if your API requires it (Basic, Bearer Token, or API Key). Choose between SSE or stdio transport options based on your needs.
+## Testing with Amazon Q
+
+To test the OpenAPI MCP Server with Amazon Q, you need to configure Amazon Q to use your MCP server. Here's how:
+
+1. **Configure Amazon Q MCP Integration**
+
+   Create or edit the MCP configuration file:
+
+   ```bash
+   mkdir -p ~/.aws/amazonq
+   nano ~/.aws/amazonq/mcp.json
+   ```
+
+   Add the following configuration:
+
+   ```json
+   {
+     "mcpServers": {
+       "awslabs.openapi-mcp-server": {
+         "command": "python",
+         "args": ["-m", "awslabs.openapi_mcp_server"],
+         "cwd": "/path/to/your/openapi-mcp-server",
+         "env": {
+           "API_NAME": "petstore",
+           "API_BASE_URL": "https://petstore3.swagger.io/api/v3",
+           "API_SPEC_URL": "https://petstore3.swagger.io/api/v3/openapi.json",
+           "LOG_LEVEL": "INFO",
+           "PYTHONPATH": "/path/to/your/openapi-mcp-server"
+         },
+         "disabled": false,
+         "autoApprove": []
+       }
+     }
+   }
+   ```
+
+2. **Start Amazon Q CLI**
+
+   Launch the Amazon Q CLI:
+
+   ```bash
+   q chat
+   ```
+
+3. **Test the Operation Prompts**
+
+   Once connected, you can test the operation prompts by asking Amazon Q to help you with specific API operations:
+
+   ```
+   I need to find a pet by ID using the Petstore API
+   ```
+
+   Amazon Q should respond with guidance using the natural language prompt.
+
+4. **Testing the Server Directly**
+
+   You can also test the server directly using the included test client:
+
+   ```bash
+   # Start the server
+   python -m awslabs.openapi_mcp_server --api-name petstore --api-base-url https://petstore3.swagger.io/api/v3 --api-spec-url https://petstore3.swagger.io/api/v3/openapi.json --log-level INFO
+
+   # In another terminal, run the test client
+   python tests/test_client.py
+   ```
+
+   The test client will connect to the server, list all available prompts and tools, and display the content of a few sample prompts.
