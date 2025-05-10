@@ -6,6 +6,8 @@ This project is a server that dynamically creates Machine Conversation Protocol 
 
 - **Dynamic Tool Generation**: Automatically creates MCP tools from OpenAPI endpoints
 - **Dynamic Prompt Generation**: Creates helpful prompts based on API structure
+  - **Operation-Specific Prompts**: Generates natural language prompts for each API operation
+  - **API Documentation Prompts**: Creates comprehensive API documentation prompts
 - **Multiple Transport Options**: Supports SSE and stdio transports
 - **Flexible Configuration**: Configure via environment variables or command line arguments
 - **OpenAPI Support**: Works with OpenAPI 3.x specifications in JSON or YAML format
@@ -44,7 +46,9 @@ Here are some ways you can work with MCP across AWS (e.g. for Amazon Q Developer
         "API_NAME": "your-api-name",
         "API_BASE_URL": "https://api.example.com",
         "API_SPEC_URL": "https://api.example.com/openapi.json",
-        "LOG_LEVEL": "ERROR"
+        "LOG_LEVEL": "ERROR",
+        "ENABLE_PROMETHEUS": "false",
+        "ENABLE_OPERATION_PROMPTS": "true"
       },
       "disabled": false,
       "autoApprove": []
@@ -111,6 +115,11 @@ export SERVER_PORT=8000
 export SERVER_TRANSPORT="sse"  # Options: sse, stdio
 export LOG_LEVEL="INFO"  # Options: DEBUG, INFO, WARNING, ERROR, CRITICAL
 
+# Metrics and monitoring configuration
+export ENABLE_PROMETHEUS="false"  # Enable/disable Prometheus metrics (default: false)
+export PROMETHEUS_PORT=9090  # Port for Prometheus metrics server
+export ENABLE_OPERATION_PROMPTS="true"  # Enable/disable operation-specific prompts (default: true)
+
 # API configuration
 export API_NAME="myapi"
 export API_BASE_URL="https://api.example.com"
@@ -154,6 +163,8 @@ docker run -p 8000:8000 \
   -e API_BASE_URL=https://api.example.com \
   -e API_SPEC_URL=https://api.example.com/openapi.json \
   -e SERVER_TRANSPORT=sse \
+  -e ENABLE_PROMETHEUS=false \
+  -e ENABLE_OPERATION_PROMPTS=true \
   openapi-mcp-server:latest
 ```
 
@@ -193,7 +204,30 @@ For more information about the test structure and strategy, see the [tests/READM
 
 ## Instructions
 
-This server acts as a bridge between OpenAPI specifications and LLMs, allowing models to have a better understanding of available API capabilities without requiring manual tool definitions. The server creates structured MCP tools that LLMs can use to understand and interact with your API endpoints, parameters, and response formats. Point the server to your API by providing: API name, API base URL and Auth Details, OpenAPI specification URL or local file path. Set up appropriate authentication if your API requires it (Basic, Bearer Token, or API Key). Choose between SSE or stdio transport options based on your needs.
+This server acts as a bridge between OpenAPI specifications and LLMs, allowing models to have a better understanding of available API capabilities without requiring manual tool definitions. The server creates structured MCP tools that LLMs can use to understand and interact with your API endpoints, parameters, and response formats.
+
+### Key Features
+
+1. **Dynamic Tool Generation**: Automatically creates MCP tools from your API endpoints
+2. **Operation-Specific Prompts**: Generates natural language prompts for each API operation
+3. **API Documentation**: Creates comprehensive documentation prompts for the entire API
+4. **Authentication Support**: Works with Basic Auth, Bearer Token, and API Key authentication
+
+### Getting Started
+
+1. Point the server to your API by providing:
+   - API name
+   - API base URL
+   - OpenAPI specification URL or local file path
+2. Set up appropriate authentication if your API requires it
+3. Choose between SSE or stdio transport options based on your needs
+
+### Monitoring and Metrics
+
+The server includes built-in monitoring capabilities:
+- Prometheus metrics (disabled by default)
+- Detailed logging of API calls and tool usage
+- Performance tracking for API operations
 ## Testing with Amazon Q
 
 To test the OpenAPI MCP Server with Amazon Q, you need to configure Amazon Q to use your MCP server. Here's how:
@@ -221,6 +255,8 @@ To test the OpenAPI MCP Server with Amazon Q, you need to configure Amazon Q to 
            "API_BASE_URL": "https://petstore3.swagger.io/api/v3",
            "API_SPEC_URL": "https://petstore3.swagger.io/api/v3/openapi.json",
            "LOG_LEVEL": "INFO",
+           "ENABLE_PROMETHEUS": "false",
+           "ENABLE_OPERATION_PROMPTS": "true",
            "PYTHONPATH": "/path/to/your/openapi-mcp-server"
          },
          "disabled": false,
@@ -254,7 +290,7 @@ To test the OpenAPI MCP Server with Amazon Q, you need to configure Amazon Q to 
 
    ```bash
    # Start the server
-   python -m awslabs.openapi_mcp_server --api-name petstore --api-base-url https://petstore3.swagger.io/api/v3 --api-spec-url https://petstore3.swagger.io/api/v3/openapi.json --log-level INFO
+   python -m awslabs.openapi_mcp_server --api-name petstore --api-base-url https://petstore3.swagger.io/api/v3 --api-spec-url https://petstore3.swagger.io/api/v3/openapi.json --log-level INFO --enable-operation-prompts
 
    # In another terminal, run the test client
    python tests/test_client.py
