@@ -146,7 +146,7 @@ The observability features are primarily implemented in `awslabs/openapi_mcp_ser
 
 ```bash
 # Enable Prometheus metrics
-export USE_PROMETHEUS=true
+export ENABLE_PROMETHEUS=true
 export PROMETHEUS_PORT=9090  # Port for Prometheus metrics server
 
 # Configure metrics settings
@@ -205,6 +205,27 @@ The OpenAPI MCP Server can be integrated with various AWS services to enhance it
 - Set up CloudWatch Metrics for monitoring key performance indicators
 - Create CloudWatch Alarms for alerting on critical issues
 - Use CloudWatch Dashboards for visualizing metrics
+
+### Amazon Managed Service for Prometheus
+
+- Use Amazon Managed Service for Prometheus for scalable metrics storage
+- Configure remote write from the OpenAPI MCP Server to Amazon Managed Service for Prometheus
+- Set up IAM roles with appropriate permissions for metrics access
+- Integrate with Amazon Managed Grafana for visualization
+
+### Amazon Managed Grafana
+
+- Create dashboards for visualizing metrics from Amazon Managed Service for Prometheus
+- Set up alerts based on metric thresholds
+- Create custom dashboards for different user roles
+- Share dashboards with team members
+
+### AWS X-Ray
+
+- Enable X-Ray tracing for distributed request tracking
+- Analyze service dependencies and bottlenecks
+- Identify performance issues and errors
+- Visualize request flows through your application
 
 ### AWS Lambda
 
