@@ -3,6 +3,7 @@
 import os
 import re
 from awslabs.openapi_mcp_server import get_caller_info, logger
+from awslabs.openapi_mcp_server.utils.config import ENABLE_OPERATION_PROMPTS
 from mcp.server.fastmcp import FastMCP
 from typing import Any, Callable, Dict, List
 
@@ -132,13 +133,8 @@ async def generate_operation_prompts(
         api_name: The name of the API
         openapi_spec: The OpenAPI specification
     """
-    # Check if operation prompts are enabled (default to True)
-    enable_prompts = os.environ.get('ENABLE_OPERATION_PROMPTS', 'true').lower() in (
-        'true',
-        'yes',
-        '1',
-    )
-    if not enable_prompts:
+    # Check if operation prompts are enabled
+    if not ENABLE_OPERATION_PROMPTS:
         logger.info('Operation prompts generation is disabled by ENABLE_OPERATION_PROMPTS')
         return
 
