@@ -140,6 +140,17 @@ def create_mcp_server(config: Config) -> FastMCP:
             asyncio.run(generate_enhanced_api_instructions(server, config.api_name, openapi_spec))  # type: ignore
         except Exception as e:
             logger.warning(f'Failed to generate enhanced instructions: {e}')
+            
+        # Generate operation-specific prompts
+        try:
+            from awslabs.openapi_mcp_server.prompts.operation_instructions import (
+                generate_operation_prompts,
+            )
+            
+            logger.info(f'Generating operation-specific prompts for API: {config.api_name}')
+            asyncio.run(generate_operation_prompts(server, config.api_name, openapi_spec))  # type: ignore
+        except Exception as e:
+            logger.warning(f'Failed to generate operation-specific prompts: {e}')
 
         # Register health check tool
         async def health_check() -> Dict[str, Any]:
