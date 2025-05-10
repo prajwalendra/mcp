@@ -62,8 +62,8 @@ Here are some ways you can work with MCP across AWS (e.g. for Amazon Q Developer
 ### Basic Usage
 
 ```bash
-# Start with default settings (Petstore API)
-awslabs.openapi-mcp-server
+# Start with Petstore API example
+awslabs.openapi-mcp-server --api-name petstore --api-url https://petstore3.swagger.io/api/v3 --spec-url https://petstore3.swagger.io/api/v3/openapi.json
 ```
 
 ### Custom API
@@ -283,17 +283,3 @@ To test the OpenAPI MCP Server with Amazon Q, you need to configure Amazon Q to 
    ```
 
    Amazon Q should respond with guidance using the natural language prompt.
-
-4. **Testing the Server Directly**
-
-   You can also test the server directly using the included test client:
-
-   ```bash
-   # Start the server
-   python -m awslabs.openapi_mcp_server --api-name petstore --api-base-url https://petstore3.swagger.io/api/v3 --api-spec-url https://petstore3.swagger.io/api/v3/openapi.json --log-level INFO --enable-operation-prompts
-
-   # In another terminal, run the test client
-   python tests/test_client.py
-   ```
-
-   The test client will connect to the server, list all available prompts and tools, and display the content of a few sample prompts.
