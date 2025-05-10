@@ -1,6 +1,6 @@
 """API discovery and introspection utilities."""
 
-from awslabs.openapi_mcp_server import logger, register_custom_tool
+from awslabs.openapi_mcp_server import logger
 from awslabs.openapi_mcp_server.utils.metrics_provider import metrics
 from awslabs.openapi_mcp_server.utils.openapi_validator import extract_api_structure
 from mcp.server.fastmcp import FastMCP
@@ -223,53 +223,6 @@ def register_discovery_tools(
         openapi_spec: The OpenAPI specification
         base_url: Base URL of the API
     """
-
-    # Register get_api_info tool
-    async def api_info_tool() -> ApiInfo:
-        """Get information about the API.
-
-        Returns:
-            ApiInfo: Information about the API
-        """
-        return await get_api_info(server, api_name, openapi_spec, base_url)
-
-    register_custom_tool(
-        server,
-        api_info_tool,
-        name=f'{api_name}_getApiInfo',
-        description=f'Get information about the {api_name} API',
-    )
-
-    # Register get_api_tools tool
-    async def api_tools_tool() -> List[ToolInfo]:
-        """Get information about tools for the API.
-
-        Returns:
-            List[ToolInfo]: Information about tools for the API
-        """
-        return await get_api_tools(server, api_name)
-
-    register_custom_tool(
-        server,
-        api_tools_tool,
-        name=f'{api_name}_getApiTools',
-        description=f'Get information about tools for the {api_name} API',
-    )
-
-    # Register get_api_stats tool
-    async def api_stats_tool() -> ApiStats:
-        """Get statistics about API usage.
-
-        Returns:
-            ApiStats: Statistics about API usage
-        """
-        return await get_api_stats()
-
-    register_custom_tool(
-        server,
-        api_stats_tool,
-        name=f'{api_name}_getApiStats',
-        description=f'Get statistics about {api_name} API usage',
-    )
-
-    logger.info(f'Registered discovery tools for {api_name} API')
+    # We're removing the custom tool registration to avoid challenges with Amazon Q
+    logger.info(f'Discovery tools registration skipped for {api_name} API')
+    return

@@ -92,7 +92,7 @@ def test_generate_simple_prompt_no_summary():
 async def test_generate_operation_prompts():
     """Test generating operation prompts."""
     server = MagicMock()
-    server._prompt_manager = MagicMock()
+    server.add_prompt = MagicMock()
 
     openapi_spec = {
         'paths': {
@@ -122,26 +122,37 @@ async def test_generate_operation_prompts():
     await generate_operation_prompts(server, 'petstore', openapi_spec)
 
     # Check that prompts were added
-    assert server._prompt_manager.add_prompt.call_count == 2
+    assert server.add_prompt.call_count == 2
+
+    # Check that the first call was with a CustomPrompt
+    args, kwargs = server.add_prompt.call_args_list[0]
+    assert len(args) == 1
+    # Check prompt properties instead of type
+    assert hasattr(args[0], 'name')
+    assert hasattr(args[0], 'description')
+    assert hasattr(args[0], 'content')
+    assert args[0].name == 'petstore_getPetById_prompt'
+    assert 'Find pet by ID' in args[0].content
 
 
 @pytest.mark.asyncio
 async def test_generate_operation_prompts_disabled():
     """Test that prompt generation is disabled when env var is set."""
     server = MagicMock()
+    server.add_prompt = MagicMock()
 
     with patch.dict(os.environ, {'ENABLE_OPERATION_PROMPTS': 'false'}):
         await generate_operation_prompts(server, 'petstore', {})
 
     # Check that no prompts were added
-    server._prompt_manager.add_prompt.assert_not_called()
+    server.add_prompt.assert_not_called()
 
 
 @pytest.mark.asyncio
 async def test_generate_operation_prompts_missing_operation_id():
     """Test handling of operations without operationId."""
     server = MagicMock()
-    server._prompt_manager = MagicMock()
+    server.add_prompt = MagicMock()
 
     openapi_spec = {
         'paths': {
@@ -158,4 +169,4 @@ async def test_generate_operation_prompts_missing_operation_id():
     await generate_operation_prompts(server, 'petstore', openapi_spec)
 
     # Check that no prompts were added
-    server._prompt_manager.add_prompt.assert_not_called()
+    server.add_prompt.assert_not_called()
