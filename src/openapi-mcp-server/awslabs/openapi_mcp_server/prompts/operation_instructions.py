@@ -4,19 +4,24 @@ import os
 import re
 from awslabs.openapi_mcp_server import get_caller_info, logger
 from mcp.server.fastmcp import FastMCP
-from typing import Any, Dict, List
+from typing import Any, Callable, Dict, List
 
 
-# Import CustomPrompt directly
+# Import Prompt directly
 try:
-    from mcp.prompts import CustomPrompt  # type: ignore
+    from mcp.prompts import Prompt  # type: ignore
 except ImportError:
     try:
-        from fastmcp.prompts.prompt import CustomPrompt  # type: ignore
+        from fastmcp.prompts.prompt import Prompt  # type: ignore
     except ImportError:
-        # Define a simple CustomPrompt class if neither is available
-        class CustomPrompt:
-            """Simple fallback implementation of CustomPrompt class."""
+        # Define a simple Prompt class if neither is available
+        class Prompt:
+            """Simple fallback implementation of Prompt class."""
+
+            @staticmethod
+            def from_function(fn: Callable, name: str, description: str):
+                """Create a simple prompt from a function."""
+                return {'fn': fn, 'name': name, 'description': description}
 
             def __init__(self, name: str, description: str, content: str):
                 """Initialize a CustomPrompt.
@@ -182,17 +187,21 @@ async def generate_operation_prompts(
                     components=components,
                 )
 
-                # Create a CustomPrompt
-                prompt = CustomPrompt(
+                # Create a prompt function
+                def prompt_fn():
+                    return [{'role': 'user', 'content': prompt_content}]
+
+                # Create and add the prompt
+                prompt = Prompt.from_function(
+                    fn=prompt_fn,
                     name=f'{api_name}_{operation_id}_prompt',
                     description=f'Simple prompt for {operation_id} operation',
-                    content=prompt_content,
                 )
 
-                # Add to server using the public API
-                server.add_prompt(prompt)  # type: ignore
-                created_prompts.append(prompt.name)
-                logger.info(f'Added operation prompt: {prompt.name}')
+                # Add to server
+                server._prompt_manager.add_prompt(prompt)  # type: ignore
+                created_prompts.append(f'{api_name}_{operation_id}_prompt')
+                logger.info(f'Added operation prompt: {api_name}_{operation_id}_prompt')
             except Exception as e:
                 logger.warning(f'Failed to generate prompt for {operation_id}: {e}')
 
