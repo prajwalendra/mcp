@@ -81,9 +81,6 @@ def test_api_stats_model():
 @pytest.mark.asyncio
 async def test_get_api_info():
     """Test the get_api_info function."""
-    # Create mock server
-    server = MagicMock()
-
     # Create mock OpenAPI spec
     openapi_spec = {
         'info': {

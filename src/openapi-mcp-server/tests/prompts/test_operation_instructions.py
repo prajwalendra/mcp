@@ -1,6 +1,5 @@
 """Tests for operation instructions generation."""
 
-import os
 import pytest
 from awslabs.openapi_mcp_server.prompts.operation_instructions import (
     generate_operation_prompts,
@@ -10,9 +9,11 @@ from awslabs.openapi_mcp_server.prompts.operation_instructions import (
 )
 from unittest.mock import MagicMock, patch
 
+
 # Mock the config module
 @pytest.fixture(autouse=True)
 def mock_config():
+    """Mock the configuration module for testing."""
     with patch('awslabs.openapi_mcp_server.prompts.operation_instructions.ENABLE_OPERATION_PROMPTS', True):
         yield
 
@@ -99,10 +100,10 @@ async def test_generate_operation_prompts():
     """Test generating operation prompts."""
     # Create a server mock that properly simulates FastMCP behavior
     server = MagicMock()
-    
+
     # Set up the add_prompt_from_fn method which is what our code will try to use first
     server.add_prompt_from_fn = MagicMock()
-    
+
     openapi_spec = {
         'paths': {
             '/pet/{petId}': {
@@ -132,13 +133,13 @@ async def test_generate_operation_prompts():
 
     # Check that prompts were added using add_prompt_from_fn
     assert server.add_prompt_from_fn.call_count == 2
-    
+
     # Check the first call arguments
     args, kwargs = server.add_prompt_from_fn.call_args_list[0]
     assert kwargs['name'] == 'petstore_getPetById_prompt'
     assert kwargs['description'] == 'Simple prompt for getPetById operation'
     assert callable(kwargs['fn'])
-    
+
     # Check the second call arguments
     args, kwargs = server.add_prompt_from_fn.call_args_list[1]
     assert kwargs['name'] == 'petstore_addPet_prompt'

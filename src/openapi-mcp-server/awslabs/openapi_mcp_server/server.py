@@ -206,8 +206,7 @@ def create_mcp_server(config: Config) -> FastMCP:
         except Exception as e:
             logger.warning(f'Failed to list tools: {e}')
 
-    # Log the resource and prompt counts
-    resource_count = len(server._resources) if hasattr(server, '_resources') else 0  # type: ignore
+    # Log the prompt count
     prompt_count = (
         len(server._prompt_manager._prompts)
         if hasattr(server, '_prompt_manager') and hasattr(server._prompt_manager, '_prompts')
