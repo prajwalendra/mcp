@@ -200,10 +200,24 @@ async def generate_operation_prompts(
                     description=f'Simple prompt for {operation_id} operation',
                 )
 
-                # Add to server
-                if hasattr(server, 'add_prompt'):
-                    server.add_prompt(prompt)
+                # Create and add the prompt
+                if hasattr(server, 'add_prompt_from_fn'):
+                    # Use add_prompt_from_fn if available
+                    server.add_prompt_from_fn(
+                        fn=prompt_fn,
+                        name=prompt_name,
+                        description=f"Simple prompt for {operation_id} operation"
+                    )
+                elif hasattr(server, 'add_prompt'):
+                    # Try to use add_prompt directly
+                    try:
+                        server.add_prompt(prompt)
+                    except AttributeError:
+                        # If that fails, try to add to prompt manager directly
+                        if hasattr(server, '_prompt_manager'):
+                            server._prompt_manager.add_prompt(prompt)  # type: ignore
                 else:
+                    # Last resort, try to add to prompt manager directly
                     server._prompt_manager.add_prompt(prompt)  # type: ignore
                 created_prompts.append(prompt_name)
                 logger.debug(
