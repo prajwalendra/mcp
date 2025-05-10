@@ -2,11 +2,12 @@
 """Test client for OpenAPI MCP Server."""
 
 import asyncio
+import httpx
+import json
 import logging
 import sys
-import json
-import httpx
-from typing import List, Dict, Any
+from typing import Any, Dict, List
+
 
 # Configure logging
 logging.basicConfig(
@@ -66,17 +67,17 @@ async def main() -> None:
     # Create HTTP client
     async with httpx.AsyncClient(base_url="http://localhost:8002") as client:
         logger.info("Connected to MCP server")
-        
+
         # List all prompts
         prompts = await list_prompts(client)
         logger.info("Available prompts:")
         for prompt in prompts:
             logger.info(f"- {prompt}")
-        
+
         # Check for operation prompts
         operation_prompts = [p for p in prompts if p.endswith("_prompt")]
         logger.info(f"\nFound {len(operation_prompts)} operation prompts")
-        
+
         # Get content of a few sample prompts
         sample_prompts = operation_prompts[:3] if len(operation_prompts) >= 3 else operation_prompts
         for prompt_name in sample_prompts:
@@ -84,7 +85,7 @@ async def main() -> None:
             prompt_content = await get_prompt_content(client, prompt_name)
             if prompt_content:
                 logger.info(json.dumps(prompt_content, indent=2))
-        
+
         # List all tools
         tools = await list_tools(client)
         logger.info("\nAvailable tools:")

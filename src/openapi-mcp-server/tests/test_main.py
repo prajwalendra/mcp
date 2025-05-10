@@ -23,7 +23,7 @@ def test_main_function(mock_asyncio_run, mock_parse_args, mock_load_config, mock
 
     mock_server = MagicMock()
     mock_create_mcp_server.return_value = mock_server
-    
+
     # Mock the asyncio.run result
     mock_asyncio_run.return_value = (10, 5, 2)  # prompts, tools, resources
 

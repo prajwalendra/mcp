@@ -2,6 +2,7 @@
 
 import os
 
+
 # Metrics configuration
 METRICS_MAX_HISTORY = int(os.environ.get('METRICS_MAX_HISTORY', '100'))
 USE_PROMETHEUS = os.environ.get('ENABLE_PROMETHEUS', 'false').lower() == 'true'

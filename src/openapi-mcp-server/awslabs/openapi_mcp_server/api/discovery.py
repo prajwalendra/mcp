@@ -5,7 +5,7 @@ from awslabs.openapi_mcp_server.utils.metrics_provider import metrics
 from awslabs.openapi_mcp_server.utils.openapi_validator import extract_api_structure
 from mcp.server.fastmcp import FastMCP
 from pydantic import BaseModel, Field
-from typing import Any, Dict, List, Optional, Union, cast
+from typing import Any, Dict, List, Optional, cast
 
 
 class ApiInfo(BaseModel):
@@ -225,34 +225,34 @@ def register_discovery_tools(
         base_url: Base URL of the API
     """
     logger.info(f'Registering discovery tools for {api_name} API')
-    
+
     # Register the API info tool
     server.add_tool(
         name=f"{api_name}_getApiInfo",
         description=f"Get information about the {api_name} API",
         fn=lambda: get_api_info(api_name, openapi_spec, base_url)
     )
-    
+
     # Register the API tools tool
     # Use a closure to capture the current server and api_name
     def get_tools_wrapper() -> List[ToolInfo]:
         return cast(List[ToolInfo], get_api_tools(server, api_name))
-    
+
     server.add_tool(
         name=f"{api_name}_getApiTools",
         description=f"Get a list of available tools for the {api_name} API",
         fn=get_tools_wrapper
     )
-    
+
     # Register the API stats tool
     # Use a closure to ensure no positional arguments
     def get_stats_wrapper() -> ApiStats:
         return cast(ApiStats, get_api_stats(api_name))
-    
+
     server.add_tool(
         name=f"{api_name}_getApiStats",
         description=f"Get usage statistics for the {api_name} API",
         fn=get_stats_wrapper
     )
-    
+
     logger.info(f'Registered discovery tools for {api_name} API')

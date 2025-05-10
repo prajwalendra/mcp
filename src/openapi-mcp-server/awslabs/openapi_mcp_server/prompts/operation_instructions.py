@@ -1,6 +1,5 @@
 """Operation-specific instructions generation for OpenAPI specifications."""
 
-import os
 import re
 from awslabs.openapi_mcp_server import get_caller_info, logger
 from awslabs.openapi_mcp_server.utils.config import ENABLE_OPERATION_PROMPTS
@@ -11,7 +10,7 @@ from typing import Any, Callable, Dict, List, Protocol, Union, cast
 # Define a protocol for server objects that can add prompts
 class PromptServer(Protocol):
     """Protocol for server objects that can add prompts."""
-    
+
     def add_prompt(self, *args: Any, **kwargs: Any) -> Any:
         """Add a prompt to the server."""
         ...
@@ -207,7 +206,7 @@ async def generate_operation_prompts(
 
                 # Create and add the prompt based on server capabilities
                 server_obj = cast(Any, server)
-                
+
                 if hasattr(server_obj, 'add_prompt_from_fn'):
                     # Use add_prompt_from_fn if available
                     server_obj.add_prompt_from_fn(
