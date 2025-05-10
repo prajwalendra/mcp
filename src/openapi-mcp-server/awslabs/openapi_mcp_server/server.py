@@ -140,7 +140,6 @@ def create_mcp_server(config: Config) -> FastMCP:
             # Log the names of all prompts
             if prompt_count > 0:
                 prompt_names = list(server._prompt_manager._prompts.keys())
-                logger.info(f'Prompt names: {prompt_names}')
         except Exception as e:
             logger.warning(f'Failed to generate operation-specific prompts: {e}')
             import traceback
@@ -192,8 +191,22 @@ def create_mcp_server(config: Config) -> FastMCP:
     except Exception as e:
         logger.error(f'Error setting up API: {e}')
 
-    # Log summary of registered components
-    tool_count = len(server._tools) if hasattr(server, '_tools') else 0  # type: ignore
+    # Move the logging here, after the server is fully initialized
+    # Get the actual tools from the server's internal structure
+    tool_count = 0
+    tool_names = []
+
+    # Try different ways to access tools based on FastMCP implementation
+    if hasattr(server, 'list_tools'):
+        try:
+            # Use asyncio to run the async method in a synchronous context
+            tools = asyncio.run(server.list_tools())  # type: ignore
+            tool_count = len(tools)
+            tool_names = [tool.get('name') for tool in tools]
+        except Exception as e:
+            logger.warning(f'Failed to list tools: {e}')
+
+    # Log the resource and prompt counts
     resource_count = len(server._resources) if hasattr(server, '_resources') else 0  # type: ignore
     prompt_count = (
         len(server._prompt_manager._prompts)
@@ -201,14 +214,8 @@ def create_mcp_server(config: Config) -> FastMCP:
         else 0
     )
 
-    logger.info('Server initialization complete with:')
-    logger.info(f'- {tool_count} tools registered')
-    logger.info(f'- {resource_count} resources registered')
-    logger.info(f'- {prompt_count} prompts registered')
-
     # Log details of registered components
-    if tool_count > 0 and hasattr(server, '_tools'):
-        tool_names = list(server._tools.keys())  # type: ignore
+    if tool_count > 0:
         logger.info(f'Registered tools: {tool_names}')
 
     if (
@@ -293,6 +300,18 @@ def main():
     # Create and run the MCP server
     logger.info('Creating MCP server')
     mcp_server = create_mcp_server(config)
+    #log number of prompts, tools and resources
+    async def get_counts(server):
+        prompts = await server.get_prompts()
+        tools = await server.get_tools()
+        resources = await server.get_resources()
+        return len(prompts), len(tools), len(resources)
+
+    prompt_count, tool_count, resource_count = asyncio.run(get_counts(mcp_server))
+    logger.info(f'Number of prompts: {prompt_count}')
+    logger.info(f'Number of tools: {tool_count}')
+    logger.info(f'Number of resources: {resource_count}')
+
 
     # Run server with appropriate transport
     if config.transport == 'sse':
@@ -302,7 +321,6 @@ def main():
     else:
         logger.info('Running server with stdio transport')
         mcp_server.run()
-
 
 if __name__ == '__main__':
     main()

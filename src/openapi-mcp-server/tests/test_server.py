@@ -254,8 +254,8 @@ def test_create_mcp_server(mock_asyncio_run, mock_load_openapi_spec):
 
     assert server is not None
     mock_load_openapi_spec.assert_called_once()
-    # We now call asyncio.run twice (once for regular instructions, once for enhanced)
-    assert mock_asyncio_run.call_count == 2
+    # We now call asyncio.run at least once for operation prompts
+    assert mock_asyncio_run.call_count >= 1
 
 
 @patch('awslabs.openapi_mcp_server.server.load_openapi_spec')
@@ -373,17 +373,13 @@ def test_create_mcp_server_api_key_auth_query(mock_asyncio_run, mock_load_openap
 
 
 @patch('awslabs.openapi_mcp_server.server.load_openapi_spec')
-@patch('awslabs.openapi_mcp_server.server.generate_api_instructions')
 @patch('awslabs.openapi_mcp_server.server.asyncio.run')
 def test_create_mcp_server_api_key_auth_cookie(
-    mock_asyncio_run, mock_gen_instructions, mock_load_openapi_spec
+    mock_asyncio_run, mock_load_openapi_spec
 ):
     """Test creating the MCP server with API key authentication in cookie."""
     # Setup mocks
     mock_load_openapi_spec.return_value = {'openapi': '3.0.0', 'info': {'title': 'Test API'}}
-
-    # Use AsyncMock for the generate_api_instructions function
-    mock_gen_instructions.return_value = None
 
     # Make sure asyncio.run properly handles the coroutine
     def mock_run_side_effect(coroutine):

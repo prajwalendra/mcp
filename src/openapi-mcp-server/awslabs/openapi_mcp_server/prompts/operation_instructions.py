@@ -201,9 +201,12 @@ async def generate_operation_prompts(
                 )
 
                 # Add to server
-                server._prompt_manager.add_prompt(prompt)  # type: ignore
+                if hasattr(server, 'add_prompt'):
+                    server.add_prompt(prompt)
+                else:
+                    server._prompt_manager.add_prompt(prompt)  # type: ignore
                 created_prompts.append(prompt_name)
-                logger.info(
+                logger.debug(
                     f'Added operation prompt: {prompt_name} with content: {prompt_content}'
                 )
             except Exception as e:
@@ -212,4 +215,4 @@ async def generate_operation_prompts(
 
                 logger.debug(f'Traceback: {traceback.format_exc()}')
 
-    logger.info(f'Created {len(created_prompts)} operation-specific prompts')
+    logger.debug(f'Created {len(created_prompts)} operation-specific prompts')

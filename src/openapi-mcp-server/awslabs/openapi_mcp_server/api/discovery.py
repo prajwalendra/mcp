@@ -211,7 +211,6 @@ async def get_api_stats() -> ApiStats:
             recent_errors=[],
         )
 
-
 def register_discovery_tools(
     server: FastMCP, api_name: str, openapi_spec: Dict[str, Any], base_url: str
 ) -> None:
@@ -223,6 +222,27 @@ def register_discovery_tools(
         openapi_spec: The OpenAPI specification
         base_url: Base URL of the API
     """
-    # We're removing the custom tool registration to avoid challenges with Amazon Q
-    logger.info(f'Discovery tools registration skipped for {api_name} API')
-    return
+    logger.info(f'Registering discovery tools for {api_name} API')
+    
+    # Register the API info tool
+    server.add_tool(
+        name=f"{api_name}_getApiInfo",
+        description=f"Get information about the {api_name} API",
+        fn=lambda: get_api_info(api_name, openapi_spec, base_url)
+    )
+    
+    # Register the API tools tool
+    server.add_tool(
+        name=f"{api_name}_getApiTools",
+        description=f"Get a list of available tools for the {api_name} API",
+        fn=lambda: get_api_tools(api_name, openapi_spec)
+    )
+    
+    # Register the API stats tool
+    server.add_tool(
+        name=f"{api_name}_getApiStats",
+        description=f"Get usage statistics for the {api_name} API",
+        fn=lambda: get_api_stats(api_name)
+    )
+    
+    logger.info(f'Registered discovery tools for {api_name} API')
