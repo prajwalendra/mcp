@@ -44,8 +44,5 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
-- Support for additional authentication methods
-- WebSocket transport option
-- Enhanced API documentation generation
-- Integration with additional AWS services
-- Performance optimizations for large API specifications
+- No specific features planned at this time
+
