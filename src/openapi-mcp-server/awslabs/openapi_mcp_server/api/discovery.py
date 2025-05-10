@@ -5,7 +5,7 @@ from awslabs.openapi_mcp_server.utils.metrics_provider import metrics
 from awslabs.openapi_mcp_server.utils.openapi_validator import extract_api_structure
 from mcp.server.fastmcp import FastMCP
 from pydantic import BaseModel, Field
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional, Union, cast
 
 
 class ApiInfo(BaseModel):
@@ -45,12 +45,11 @@ class ApiStats(BaseModel):
 
 
 async def get_api_info(
-    server: FastMCP, api_name: str, openapi_spec: Dict[str, Any], base_url: str
+    api_name: str, openapi_spec: Dict[str, Any], base_url: str
 ) -> ApiInfo:
     """Get information about an API.
 
     Args:
-        server: The MCP server
         api_name: Name of the API
         openapi_spec: The OpenAPI specification
         base_url: Base URL of the API
@@ -183,8 +182,11 @@ async def get_api_tools(server: FastMCP, api_name: str) -> List[ToolInfo]:
     return tools
 
 
-async def get_api_stats() -> ApiStats:
+async def get_api_stats(api_name: Optional[str] = None) -> ApiStats:
     """Get statistics about API usage.
+
+    Args:
+        api_name: Optional name of the API to filter stats for
 
     Returns:
         ApiStats: Statistics about API usage
@@ -232,17 +234,25 @@ def register_discovery_tools(
     )
     
     # Register the API tools tool
+    # Use a closure to capture the current server and api_name
+    def get_tools_wrapper() -> List[ToolInfo]:
+        return cast(List[ToolInfo], get_api_tools(server, api_name))
+    
     server.add_tool(
         name=f"{api_name}_getApiTools",
         description=f"Get a list of available tools for the {api_name} API",
-        fn=lambda: get_api_tools(api_name, openapi_spec)
+        fn=get_tools_wrapper
     )
     
     # Register the API stats tool
+    # Use a closure to ensure no positional arguments
+    def get_stats_wrapper() -> ApiStats:
+        return cast(ApiStats, get_api_stats(api_name))
+    
     server.add_tool(
         name=f"{api_name}_getApiStats",
         description=f"Get usage statistics for the {api_name} API",
-        fn=lambda: get_api_stats(api_name)
+        fn=get_stats_wrapper
     )
     
     logger.info(f'Registered discovery tools for {api_name} API')

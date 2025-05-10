@@ -5,7 +5,16 @@ import re
 from awslabs.openapi_mcp_server import get_caller_info, logger
 from awslabs.openapi_mcp_server.utils.config import ENABLE_OPERATION_PROMPTS
 from mcp.server.fastmcp import FastMCP
-from typing import Any, Callable, Dict, List
+from typing import Any, Callable, Dict, List, Protocol, Union, cast
+
+
+# Define a protocol for server objects that can add prompts
+class PromptServer(Protocol):
+    """Protocol for server objects that can add prompts."""
+    
+    def add_prompt(self, *args: Any, **kwargs: Any) -> Any:
+        """Add a prompt to the server."""
+        ...
 
 
 # Import Prompt directly
@@ -124,7 +133,7 @@ def generate_simple_prompt(
 
 
 async def generate_operation_prompts(
-    server: FastMCP, api_name: str, openapi_spec: Dict[str, Any]
+    server: Union[FastMCP, PromptServer], api_name: str, openapi_spec: Dict[str, Any]
 ) -> None:
     """Generate simple natural language prompts for each API operation.
 
@@ -196,32 +205,34 @@ async def generate_operation_prompts(
                     description=f'Simple prompt for {operation_id} operation',
                 )
 
-                # Create and add the prompt
-                if hasattr(server, 'add_prompt_from_fn'):
+                # Create and add the prompt based on server capabilities
+                server_obj = cast(Any, server)
+                
+                if hasattr(server_obj, 'add_prompt_from_fn'):
                     # Use add_prompt_from_fn if available
-                    server.add_prompt_from_fn(
+                    server_obj.add_prompt_from_fn(
                         fn=prompt_fn,
                         name=prompt_name,
                         description=f"Simple prompt for {operation_id} operation"
                     )
-                elif hasattr(server, 'add_prompt'):
+                elif hasattr(server_obj, 'add_prompt'):
                     # Try to use add_prompt directly
                     try:
-                        server.add_prompt(prompt)
+                        server_obj.add_prompt(prompt)
                     except (AttributeError, TypeError):
                         # If that fails, try to add to prompt manager directly
-                        if hasattr(server, '_prompt_manager'):
-                            server._prompt_manager.add_prompt(prompt)  # type: ignore
+                        if hasattr(server_obj, '_prompt_manager'):
+                            server_obj._prompt_manager.add_prompt(prompt)  # type: ignore
                         else:
                             # For test mocks that only have add_prompt but don't accept Prompt objects
-                            server.add_prompt(prompt_name, prompt_fn, f"Simple prompt for {operation_id} operation")
+                            server_obj.add_prompt(prompt_name, prompt_fn, f"Simple prompt for {operation_id} operation")  # type: ignore
                 else:
                     # Last resort, try to add to prompt manager directly
                     try:
-                        server._prompt_manager.add_prompt(prompt)  # type: ignore
+                        server_obj._prompt_manager.add_prompt(prompt)  # type: ignore
                     except (AttributeError, TypeError):
                         # For test mocks
-                        server.add_prompt(prompt_name, prompt_fn, f"Simple prompt for {operation_id} operation")
+                        server_obj.add_prompt(prompt_name, prompt_fn, f"Simple prompt for {operation_id} operation")  # type: ignore
                 created_prompts.append(prompt_name)
                 logger.debug(
                     f'Added operation prompt: {prompt_name} with content: {prompt_content}'

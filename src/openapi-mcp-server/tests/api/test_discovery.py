@@ -105,7 +105,6 @@ async def test_get_api_info():
 
     # Call the function
     api_info = await get_api_info(
-        server=server,
         api_name='test-api',
         openapi_spec=openapi_spec,
         base_url='https://example.com/api',
