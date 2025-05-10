@@ -12,7 +12,7 @@ Navigate to the project directory and build the Docker image:
 
 ```bash
 # Navigate to the project directory
-cd /Users/patilag/Projects/mcp/src/openapi-mcp-server
+cd /path/to/openapi-mcp-server
 
 # Build the Docker image
 docker build -t openapi-mcp-server:latest .
@@ -23,8 +23,12 @@ docker build -t openapi-mcp-server:latest .
 Once the image is built, you can run it locally:
 
 ```bash
-# Run with default settings (Petstore API)
-docker run -p 8000:8000 openapi-mcp-server:latest
+# Run with Petstore API example
+docker run -p 8000:8000 \
+  -e API_NAME=petstore \
+  -e API_BASE_URL=https://petstore3.swagger.io/api/v3 \
+  -e API_SPEC_URL=https://petstore3.swagger.io/api/v3/openapi.json \
+  openapi-mcp-server:latest
 
 # Run with custom API configuration
 docker run -p 8000:8000 \
@@ -32,6 +36,8 @@ docker run -p 8000:8000 \
   -e API_BASE_URL=https://api.example.com \
   -e API_SPEC_URL=https://api.example.com/openapi.json \
   -e SERVER_TRANSPORT=sse \
+  -e ENABLE_PROMETHEUS=false \
+  -e ENABLE_OPERATION_PROMPTS=true \
   openapi-mcp-server:latest
 ```
 
@@ -61,8 +67,9 @@ You can customize the container behavior using environment variables:
 -e AUTH_API_KEY_IN="header" \
 
 # Prometheus configuration
--e USE_PROMETHEUS=true \
--e PROMETHEUS_PORT=9090
+-e ENABLE_PROMETHEUS=false \
+-e PROMETHEUS_PORT=9090 \
+-e ENABLE_OPERATION_PROMPTS=true
 ```
 
 ### Deploying to AWS
@@ -204,8 +211,112 @@ For the most reliable SSE implementation with AWS services:
 3. **Implement health checks** to ensure container availability
 4. **Set up CloudWatch alarms** to monitor connection counts and response times
 5. **Use AWS X-Ray** for tracing requests through your application
+6. **Implement Amazon Managed Service for Prometheus** for metrics collection and monitoring
 
 This approach provides the most reliable support for SSE connections while still leveraging AWS managed services and maintaining compatibility with the Model Context Protocol.
+
+## Observability with AWS Services
+
+### AWS X-Ray for Distributed Tracing
+
+AWS X-Ray provides end-to-end tracing capabilities that help you analyze and debug distributed applications:
+
+1. **Enable X-Ray in your application**:
+   ```python
+   # Install the X-Ray SDK
+   pip install aws-xray-sdk
+
+   # Add X-Ray middleware to your application
+   from aws_xray_sdk.core import xray_recorder
+   from aws_xray_sdk.ext.flask.middleware import XRayMiddleware
+
+   xray_recorder.configure(service='openapi-mcp-server')
+   XRayMiddleware(app, xray_recorder)
+   ```
+
+2. **Configure X-Ray daemon** in your container:
+   ```yaml
+   # Add X-Ray daemon as a sidecar container
+   - name: xray-daemon
+     image: amazon/aws-xray-daemon
+     ports:
+       - containerPort: 2000
+         protocol: UDP
+   ```
+
+3. **Set up IAM permissions** for X-Ray:
+   ```json
+   {
+     "Version": "2012-10-17",
+     "Statement": [
+       {
+         "Effect": "Allow",
+         "Action": [
+           "xray:PutTraceSegments",
+           "xray:PutTelemetryRecords"
+         ],
+         "Resource": "*"
+       }
+     ]
+   }
+   ```
+
+### Amazon Managed Service for Prometheus
+
+For comprehensive metrics collection and monitoring, integrate with Amazon Managed Service for Prometheus:
+
+1. **Configure Prometheus in your application**:
+   ```python
+   # Set environment variables
+   ENABLE_PROMETHEUS=true
+   PROMETHEUS_PORT=9090
+   ```
+
+2. **Set up remote write to Amazon Managed Service for Prometheus**:
+   ```yaml
+   # prometheus.yml
+   global:
+     scrape_interval: 15s
+   
+   remote_write:
+     - url: https://aps-workspaces.us-east-1.amazonaws.com/workspaces/ws-12345678-1234-1234-1234-123456789012/api/v1/remote_write
+       sigv4:
+         region: us-east-1
+       queue_config:
+         max_samples_per_send: 1000
+         max_shards: 200
+   
+   scrape_configs:
+     - job_name: 'openapi-mcp-server'
+       static_configs:
+         - targets: ['localhost:9090']
+   ```
+
+3. **Create an IAM role** with permissions for Amazon Managed Service for Prometheus:
+   ```json
+   {
+     "Version": "2012-10-17",
+     "Statement": [
+       {
+         "Effect": "Allow",
+         "Action": [
+           "aps:RemoteWrite",
+           "aps:GetSeries",
+           "aps:GetLabels",
+           "aps:GetMetricMetadata"
+         ],
+         "Resource": "*"
+       }
+     ]
+   }
+   ```
+
+4. **Visualize metrics** using Amazon Managed Grafana:
+   - Create a Grafana workspace in the AWS console
+   - Add Amazon Managed Service for Prometheus as a data source
+   - Import or create dashboards for monitoring your OpenAPI MCP Server
+
+This comprehensive observability setup provides both tracing and metrics monitoring for your OpenAPI MCP Server deployment.
 
 ## AWS Service Integration Documentation References
 
