@@ -12,6 +12,8 @@ The tests are organized by module:
 
 - `tests/prompts/`: Tests for prompt-related modules
   - `test_instructions.py`: Tests for dynamic instruction generation
+  - `test_operation_instructions.py`: Tests for operation-specific prompts
+  - `test_enhanced_instructions.py`: Tests for enhanced API documentation
 
 - `tests/utils/`: Tests for utility modules
   - `test_cache_provider.py`: Tests for the cache provider module
@@ -28,6 +30,9 @@ The tests are organized by module:
 To run the tests, use pytest:
 
 ```bash
+# Install test dependencies
+pip install "awslabs.openapi-mcp-server[test]"
+
 # Run all tests
 pytest
 
@@ -52,21 +57,24 @@ The tests aim to cover:
    - Metrics collection
    - HTTP client functionality
    - API discovery tools
+   - Prompt generation utilities
 
 2. **Integration Tests**: Testing components working together
    - Server creation and configuration
    - API mounting and tool registration
    - Authentication handling
    - Dynamic prompt generation
+   - Operation-specific prompts
 
 ## Environment Variables for Testing
 
 Some tests can be influenced by environment variables:
 
-- `MCP_USE_CACHETOOLS=true`: Test with cachetools integration
-- `MCP_USE_PROMETHEUS=true`: Test with Prometheus metrics
-- `MCP_USE_TENACITY=true`: Test with tenacity retry logic
-- `MCP_USE_OPENAPI_CORE=true`: Test with openapi-core validation
+- `ENABLE_CACHETOOLS=true`: Test with cachetools integration
+- `ENABLE_PROMETHEUS=true`: Test with Prometheus metrics
+- `ENABLE_TENACITY=true`: Test with tenacity retry logic
+- `ENABLE_OPENAPI_CORE=true`: Test with openapi-core validation
+- `ENABLE_OPERATION_PROMPTS=true`: Test with operation-specific prompts
 
 ## Mock Strategy
 
@@ -76,6 +84,7 @@ The tests use mocking to isolate components:
 - File operations are mocked using `mock_open`
 - Environment variables are temporarily set and restored
 - Async functions are tested using `pytest.mark.asyncio` and `AsyncMock`
+- MCP server functionality is mocked using `MagicMock`
 
 ## Adding New Tests
 
@@ -86,3 +95,4 @@ When adding new tests:
 3. Test both success and failure paths
 4. Include tests for edge cases
 5. Ensure tests are isolated and don't depend on external state
+6. For prompt tests, verify both content generation and registration
