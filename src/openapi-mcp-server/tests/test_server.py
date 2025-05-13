@@ -159,8 +159,8 @@ def test_load_openapi_spec_file_not_found(mock_exists):
 async def test_load_openapi_spec_yaml_import_error(mock_import, mock_exists, mock_file):
     """Test handling YAML import error."""
     # Skip this test as it's causing issues with the patching
-    pytest.skip("Skipping test due to patching issues")
-    
+    pytest.skip('Skipping test due to patching issues')
+
     # Original code below
     # Simulate ImportError when importing yaml
     mock_import.side_effect = ImportError("No module named 'yaml'")
