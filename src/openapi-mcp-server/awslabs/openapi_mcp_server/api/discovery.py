@@ -44,9 +44,7 @@ class ApiStats(BaseModel):
     recent_errors: List[Dict[str, Any]] = Field([], description='Recent API call errors')
 
 
-async def get_api_info(
-    api_name: str, openapi_spec: Dict[str, Any], base_url: str
-) -> ApiInfo:
+async def get_api_info(api_name: str, openapi_spec: Dict[str, Any], base_url: str) -> ApiInfo:
     """Get information about an API.
 
     Args:
@@ -213,6 +211,7 @@ async def get_api_stats(api_name: Optional[str] = None) -> ApiStats:
             recent_errors=[],
         )
 
+
 def register_discovery_tools(
     server: FastMCP, api_name: str, openapi_spec: Dict[str, Any], base_url: str
 ) -> None:
@@ -228,9 +227,9 @@ def register_discovery_tools(
 
     # Register the API info tool
     server.add_tool(
-        name=f"{api_name}_getApiInfo",
-        description=f"Get information about the {api_name} API",
-        fn=lambda: get_api_info(api_name, openapi_spec, base_url)
+        name=f'{api_name}_getApiInfo',
+        description=f'Get information about the {api_name} API',
+        fn=lambda: get_api_info(api_name, openapi_spec, base_url),
     )
 
     # Register the API tools tool
@@ -239,9 +238,9 @@ def register_discovery_tools(
         return cast(List[ToolInfo], get_api_tools(server, api_name))
 
     server.add_tool(
-        name=f"{api_name}_getApiTools",
-        description=f"Get a list of available tools for the {api_name} API",
-        fn=get_tools_wrapper
+        name=f'{api_name}_getApiTools',
+        description=f'Get a list of available tools for the {api_name} API',
+        fn=get_tools_wrapper,
     )
 
     # Register the API stats tool
@@ -250,9 +249,9 @@ def register_discovery_tools(
         return cast(ApiStats, get_api_stats(api_name))
 
     server.add_tool(
-        name=f"{api_name}_getApiStats",
-        description=f"Get usage statistics for the {api_name} API",
-        fn=get_stats_wrapper
+        name=f'{api_name}_getApiStats',
+        description=f'Get usage statistics for the {api_name} API',
+        fn=get_stats_wrapper,
     )
 
     logger.info(f'Registered discovery tools for {api_name} API')

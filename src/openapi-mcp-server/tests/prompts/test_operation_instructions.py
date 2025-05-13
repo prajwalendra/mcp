@@ -14,7 +14,9 @@ from unittest.mock import MagicMock, patch
 @pytest.fixture(autouse=True)
 def mock_config():
     """Mock the configuration module for testing."""
-    with patch('awslabs.openapi_mcp_server.prompts.operation_instructions.ENABLE_OPERATION_PROMPTS', True):
+    with patch(
+        'awslabs.openapi_mcp_server.prompts.operation_instructions.ENABLE_OPERATION_PROMPTS', True
+    ):
         yield
 
 
@@ -153,7 +155,9 @@ async def test_generate_operation_prompts_disabled():
     server = MagicMock()
     server.add_prompt = MagicMock()
 
-    with patch('awslabs.openapi_mcp_server.prompts.operation_instructions.ENABLE_OPERATION_PROMPTS', False):
+    with patch(
+        'awslabs.openapi_mcp_server.prompts.operation_instructions.ENABLE_OPERATION_PROMPTS', False
+    ):
         await generate_operation_prompts(server, 'petstore', {})
 
     # Check that no prompts were added

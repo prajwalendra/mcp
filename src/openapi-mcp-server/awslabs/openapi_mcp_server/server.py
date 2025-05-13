@@ -299,7 +299,8 @@ def main():
     # Create and run the MCP server
     logger.info('Creating MCP server')
     mcp_server = create_mcp_server(config)
-    #log number of prompts, tools and resources
+
+    # log number of prompts, tools and resources
     async def get_counts(server):
         prompts = await server.get_prompts()
         tools = await server.get_tools()
@@ -311,7 +312,6 @@ def main():
     logger.info(f'Number of tools: {tool_count}')
     logger.info(f'Number of resources: {resource_count}')
 
-
     # Run server with appropriate transport
     if config.transport == 'sse':
         logger.info(f'Running server with SSE transport on port {config.port}')
@@ -320,6 +320,7 @@ def main():
     else:
         logger.info('Running server with stdio transport')
         mcp_server.run()
+
 
 if __name__ == '__main__':
     main()

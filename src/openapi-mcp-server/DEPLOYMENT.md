@@ -277,7 +277,7 @@ For comprehensive metrics collection and monitoring, integrate with Amazon Manag
    # prometheus.yml
    global:
      scrape_interval: 15s
-   
+
    remote_write:
      - url: https://aps-workspaces.us-east-1.amazonaws.com/workspaces/ws-12345678-1234-1234-1234-123456789012/api/v1/remote_write
        sigv4:
@@ -285,7 +285,7 @@ For comprehensive metrics collection and monitoring, integrate with Amazon Manag
        queue_config:
          max_samples_per_send: 1000
          max_shards: 200
-   
+
    scrape_configs:
      - job_name: 'openapi-mcp-server'
        static_configs:

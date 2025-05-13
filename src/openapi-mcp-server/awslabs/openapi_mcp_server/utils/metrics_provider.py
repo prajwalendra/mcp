@@ -299,7 +299,6 @@ class PrometheusMetricsProvider(MetricsProvider):
             prometheus_client.start_http_server(PROMETHEUS_PORT)
             logger.info(f'Started Prometheus metrics server on port {PROMETHEUS_PORT}')
 
-
         # Keep a small in-memory buffer for recent errors
         self._recent_errors = []
         self._max_errors = 100

@@ -212,7 +212,7 @@ async def generate_operation_prompts(
                     server_obj.add_prompt_from_fn(
                         fn=prompt_fn,
                         name=prompt_name,
-                        description=f"Simple prompt for {operation_id} operation"
+                        description=f'Simple prompt for {operation_id} operation',
                     )
                 elif hasattr(server_obj, 'add_prompt'):
                     # Try to use add_prompt directly
@@ -224,14 +224,20 @@ async def generate_operation_prompts(
                             server_obj._prompt_manager.add_prompt(prompt)  # type: ignore
                         else:
                             # For test mocks that only have add_prompt but don't accept Prompt objects
-                            server_obj.add_prompt(prompt_name, prompt_fn, f"Simple prompt for {operation_id} operation")  # type: ignore
+                            server_obj.add_prompt(
+                                prompt_name,
+                                prompt_fn,
+                                f'Simple prompt for {operation_id} operation',
+                            )  # type: ignore
                 else:
                     # Last resort, try to add to prompt manager directly
                     try:
                         server_obj._prompt_manager.add_prompt(prompt)  # type: ignore
                     except (AttributeError, TypeError):
                         # For test mocks
-                        server_obj.add_prompt(prompt_name, prompt_fn, f"Simple prompt for {operation_id} operation")  # type: ignore
+                        server_obj.add_prompt(
+                            prompt_name, prompt_fn, f'Simple prompt for {operation_id} operation'
+                        )  # type: ignore
                 created_prompts.append(prompt_name)
                 logger.debug(
                     f'Added operation prompt: {prompt_name} with content: {prompt_content}'
