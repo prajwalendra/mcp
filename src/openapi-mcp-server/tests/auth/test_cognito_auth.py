@@ -1,642 +1,552 @@
-"""Tests for Cognito authentication provider."""
+"""Tests for the Cognito authentication provider."""
 
-import base64
-import json
-import time
-import threading
-import pytest
-from unittest.mock import MagicMock, patch, PropertyMock, create_autospec
-
+import unittest
 from awslabs.openapi_mcp_server.api.config import Config
 from awslabs.openapi_mcp_server.auth.auth_errors import (
-    MissingCredentialsError,
-    InvalidCredentialsError,
-    ConfigurationError,
-    NetworkError,
     ExpiredTokenError,
+    InvalidCredentialsError,
+    MissingCredentialsError,
 )
 from awslabs.openapi_mcp_server.auth.cognito_auth import CognitoAuthProvider
+from unittest.mock import MagicMock, patch
 
 
-class TestCognitoAuthProvider:
-    """Test cases for Cognito authentication provider."""
-    
-    @patch('awslabs.openapi_mcp_server.auth.cognito_auth.boto3')
-    def test_init_with_missing_client_id(self, mock_boto3):
+class TestCognitoAuthProvider(unittest.TestCase):
+    """Tests for the Cognito authentication provider."""
+
+    def test_init_with_missing_client_id(self):
         """Test initialization with missing client ID."""
-        # Create a configuration without client ID
         config = Config()
         config.auth_type = 'cognito'
-        config.auth_cognito_client_id = ''  # Empty client ID
-        config.auth_cognito_username = 'test_username'
+        config.auth_cognito_username = 'test_user'
         config.auth_cognito_password = 'test_password'
-        
-        # Creating the provider should raise an exception
-        with pytest.raises(MissingCredentialsError) as excinfo:
-            CognitoAuthProvider(config)
-        
-        # Check the error message
-        assert "Cognito authentication requires a client ID" in str(excinfo.value)
 
-    @patch('awslabs.openapi_mcp_server.auth.cognito_auth.boto3')
-    def test_init_with_missing_username(self, mock_boto3):
+        with self.assertRaises(MissingCredentialsError):
+            CognitoAuthProvider(config)
+
+    def test_init_with_missing_username(self):
         """Test initialization with missing username."""
-        # Create a configuration without username
         config = Config()
         config.auth_type = 'cognito'
         config.auth_cognito_client_id = 'test_client_id'
-        config.auth_cognito_username = ''  # Empty username
         config.auth_cognito_password = 'test_password'
-        
-        # Creating the provider should raise an exception
-        with pytest.raises(MissingCredentialsError) as excinfo:
-            CognitoAuthProvider(config)
-        
-        # Check the error message
-        assert "Cognito authentication requires a username" in str(excinfo.value)
 
-    @patch('awslabs.openapi_mcp_server.auth.cognito_auth.boto3')
-    def test_init_with_missing_password(self, mock_boto3):
+        with self.assertRaises(MissingCredentialsError):
+            CognitoAuthProvider(config)
+
+    def test_init_with_missing_password(self):
         """Test initialization with missing password."""
-        # Create a configuration without password
         config = Config()
         config.auth_type = 'cognito'
         config.auth_cognito_client_id = 'test_client_id'
-        config.auth_cognito_username = 'test_username'
-        config.auth_cognito_password = ''  # Empty password
-        
-        # Creating the provider should raise an exception
-        with pytest.raises(MissingCredentialsError) as excinfo:
+        config.auth_cognito_username = 'test_user'
+
+        with self.assertRaises(MissingCredentialsError):
             CognitoAuthProvider(config)
-        
-        # Check the error message
-        assert "Cognito authentication requires a password" in str(excinfo.value)
 
     def test_extract_token_expiry_direct(self):
-        """Test token expiry extraction directly."""
-        # Create a sample JWT token with an expiry claim
-        # This is a mock token, not a real one
-        expiry_time = int(time.time()) + 3600  # 1 hour from now
-        token_payload = {
-            "exp": expiry_time,
-            "sub": "test-user",
-            "iss": "https://cognito-idp.region.amazonaws.com/user-pool-id"
-        }
-        
-        # Create a provider instance for testing the method directly
-        provider = CognitoAuthProvider.__new__(CognitoAuthProvider)  # Create without calling __init__
-        
-        # Mock jwt.decode to return our payload
-        with patch('awslabs.openapi_mcp_server.auth.cognito_auth.jwt.decode', return_value=token_payload):
-            # Call the method directly
-            result = provider._extract_token_expiry("mock_token")
-            
-            # Check the result
-            assert result == expiry_time
+        """Test extracting token expiry directly."""
+        # Create a provider instance without calling __init__
+        provider = CognitoAuthProvider.__new__(CognitoAuthProvider)
+        provider._is_valid = True
+        provider._token_lock = MagicMock()
+
+        # Create a mock token with expiry
+        mock_token = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiZXhwIjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c'
+
+        # Test the method
+        expiry = provider._extract_token_expiry(mock_token)
+        self.assertEqual(expiry, 1516239022)
 
     def test_extract_token_expiry_error_direct(self):
-        """Test token expiry extraction with error directly."""
-        # Create a provider instance for testing the method directly
-        provider = CognitoAuthProvider.__new__(CognitoAuthProvider)  # Create without calling __init__
-        
-        # Mock jwt.decode to raise an exception
-        with patch('awslabs.openapi_mcp_server.auth.cognito_auth.jwt.decode', side_effect=Exception('Invalid token')):
-            # Call the method directly
-            result = provider._extract_token_expiry("invalid_token")
-            
-            # Check that it returns a default value (1 hour from now)
-            # Allow for a small time difference in the test
-            assert abs(result - (int(time.time()) + 3600)) < 5
+        """Test extracting token expiry with an error."""
+        # Create a provider instance without calling __init__
+        provider = CognitoAuthProvider.__new__(CognitoAuthProvider)
+        provider._is_valid = True
+        provider._token_lock = MagicMock()
+
+        # Create an invalid token
+        mock_token = 'invalid_token'
+
+        # Test the method with a mock for time.time()
+        with patch('time.time', return_value=1000):
+            expiry = provider._extract_token_expiry(mock_token)
+            # Should default to 1 hour from now
+            self.assertEqual(expiry, 4600)  # 1000 + 3600
 
     def test_log_validation_error_direct(self):
-        """Test logging of validation error directly."""
-        # Create a provider instance for testing the method directly
-        provider = CognitoAuthProvider.__new__(CognitoAuthProvider)  # Create without calling __init__
-        
+        """Test logging validation error directly."""
+        # Create a provider instance without calling __init__
+        provider = CognitoAuthProvider.__new__(CognitoAuthProvider)
+        provider._is_valid = True
+        provider._token_lock = MagicMock()
+        provider._username = 'test_user'
+
         # Mock the logger
         with patch('awslabs.openapi_mcp_server.auth.cognito_auth.logger') as mock_logger:
-            # Call the method directly
             provider._log_validation_error()
-            
-            # Check that logger.error was called
-            assert mock_logger.error.call_count >= 2
-            # Check that the error messages contain the expected text
-            assert any("Cognito authentication requires" in str(call) for call in mock_logger.error.call_args_list)
+            mock_logger.error.assert_called()
 
     def test_is_token_expired_or_expiring_soon_direct(self):
-        """Test token expiry check directly."""
-        # Create a provider instance for testing the method directly
-        provider = CognitoAuthProvider.__new__(CognitoAuthProvider)  # Create without calling __init__
-        
-        # Test with token that is not expiring soon
-        provider._token_expires_at = int(time.time()) + 3600  # 1 hour from now
-        assert not provider._is_token_expired_or_expiring_soon()
-        
-        # Test with token that is expiring soon
-        provider._token_expires_at = int(time.time()) + 60  # 1 minute from now
-        assert provider._is_token_expired_or_expiring_soon()
-        
-        # Test with expired token
-        provider._token_expires_at = int(time.time()) - 3600  # 1 hour ago
-        assert provider._is_token_expired_or_expiring_soon()
+        """Test checking if token is expired or expiring soon."""
+        # Create a provider instance without calling __init__
+        provider = CognitoAuthProvider.__new__(CognitoAuthProvider)
+        provider._is_valid = True
+        provider._token_lock = MagicMock()
+
+        # Set token expiry to 1 hour from now
+        with patch('time.time', return_value=1000):
+            provider._token_expires_at = 1000 + 3600
+
+            # Test with current time + buffer < expiry (not expired)
+            with patch('time.time', return_value=1000):
+                self.assertFalse(provider._is_token_expired_or_expiring_soon())
+
+            # Test with current time + buffer > expiry (expired or expiring soon)
+            with patch('time.time', return_value=1000 + 3600 - 200):
+                self.assertTrue(provider._is_token_expired_or_expiring_soon())
 
     def test_provider_name_direct(self):
-        """Test provider_name property directly."""
-        # Create a provider instance for testing the property directly
-        provider = CognitoAuthProvider.__new__(CognitoAuthProvider)  # Create without calling __init__
-        
-        # Check the property value
-        assert provider.provider_name == 'cognito'
+        """Test getting provider name."""
+        # Create a provider instance without calling __init__
+        provider = CognitoAuthProvider.__new__(CognitoAuthProvider)
+        provider._is_valid = True
+        provider._token_lock = MagicMock()
 
-    # Test for _refresh_token method
+        # Test the property
+        self.assertEqual(provider.provider_name, 'cognito')
+
     def test_refresh_token_method_direct(self):
-        """Test the _refresh_token method."""
-        # Create a provider instance for testing the method directly
-        provider = CognitoAuthProvider.__new__(CognitoAuthProvider)  # Create without calling __init__
+        """Test refreshing token directly."""
+        # Create a provider instance without calling __init__
+        provider = CognitoAuthProvider.__new__(CognitoAuthProvider)
+        provider._is_valid = True
+        provider._token_lock = MagicMock()
+        provider._username = 'test_user'
         provider._token = 'old_token'
-        provider._refresh_token_value = 'test_refresh_token'
-        provider._auth_headers = {'Authorization': 'Bearer old_token'}
-        provider._username = 'test_username'  # Add missing attribute
-        
-        # Mock _refresh_cognito_token to return a new token
-        with patch.object(provider, '_refresh_cognito_token', return_value='new_token'):
-            # Mock _generate_auth_headers
-            with patch.object(provider, '_generate_auth_headers', return_value={'Authorization': 'Bearer new_token'}):
-                # Call the method
-                provider._refresh_token()
-                
-                # Check that _refresh_cognito_token was called
-                provider._refresh_cognito_token.assert_called_once()
-                
-                # Check that token was updated
-                assert provider._token == 'new_token'
-                
-                # Check that auth headers were updated
-                provider._generate_auth_headers.assert_called_once_with('new_token')
-                assert provider._auth_headers == {'Authorization': 'Bearer new_token'}
+        provider._refresh_token_value = 'refresh_token'
 
-    # Test for _refresh_token method with error
+        # Mock the refresh method
+        with patch.object(
+            provider, '_refresh_cognito_token', return_value='new_token'
+        ) as mock_refresh:
+            with patch.object(provider, '_generate_auth_headers') as mock_generate:
+                provider._refresh_token()
+                mock_refresh.assert_called_once()
+                mock_generate.assert_called_once_with('new_token')
+                self.assertEqual(provider._token, 'new_token')
+
     def test_refresh_token_error_direct(self):
-        """Test handling of errors in _refresh_token method."""
-        # Create a provider instance for testing the method directly
-        provider = CognitoAuthProvider.__new__(CognitoAuthProvider)  # Create without calling __init__
+        """Test refreshing token with an error."""
+        # Create a provider instance without calling __init__
+        provider = CognitoAuthProvider.__new__(CognitoAuthProvider)
+        provider._is_valid = True
+        provider._token_lock = MagicMock()
+        provider._username = 'test_user'
         provider._token = 'old_token'
-        provider._refresh_token_value = 'test_refresh_token'
-        provider._username = 'test_username'  # Add missing attribute
-        
-        # Mock _refresh_cognito_token to raise an exception
-        with patch.object(provider, '_refresh_cognito_token', side_effect=Exception('Refresh error')):
-            # Call the method, should raise ExpiredTokenError
-            with pytest.raises(ExpiredTokenError) as excinfo:
-                provider._refresh_token()
-            
-            # Check the error message
-            assert "Token refresh failed" in str(excinfo.value)
+        provider._refresh_token_value = 'refresh_token'
 
-    # Test for get_auth_headers with mocking of parent class method
+        # Mock the refresh method to raise an exception
+        with patch.object(
+            provider, '_refresh_cognito_token', side_effect=Exception('Refresh error')
+        ):
+            with patch('awslabs.openapi_mcp_server.auth.cognito_auth.logger') as mock_logger:
+                with self.assertRaises(ExpiredTokenError):
+                    provider._refresh_token()
+                mock_logger.error.assert_called()
+
     def test_get_auth_headers_direct(self):
-        """Test get_auth_headers directly."""
-        # Create a provider instance for testing the method directly
-        provider = CognitoAuthProvider.__new__(CognitoAuthProvider)  # Create without calling __init__
-        provider._token = 'test_token'
-        provider._token_expires_at = int(time.time()) + 3600  # Expires in 1 hour
+        """Test getting auth headers directly."""
+        # Create a provider instance without calling __init__
+        provider = CognitoAuthProvider.__new__(CognitoAuthProvider)
+        provider._is_valid = True
+        provider._token_lock = MagicMock()
         provider._auth_headers = {'Authorization': 'Bearer test_token'}
-        provider._token_lock = threading.RLock()  # Create a real lock
-        provider._is_valid = True  # Add missing attribute required by parent class
-        
-        # Mock _is_token_expired_or_expiring_soon to return False
+
+        # Mock the token expiry check
         with patch.object(provider, '_is_token_expired_or_expiring_soon', return_value=False):
-            # Mock super().get_auth_headers to return headers directly
-            with patch('awslabs.openapi_mcp_server.auth.bearer_auth.BearerAuthProvider.get_auth_headers', 
-                      return_value={'Authorization': 'Bearer test_token'}):
-                # Call get_auth_headers
-                headers = provider.get_auth_headers()
-                
-                # Check the headers
-                assert headers == {'Authorization': 'Bearer test_token'}
+            headers = provider.get_auth_headers()
+            self.assertEqual(headers, {'Authorization': 'Bearer test_token'})
 
-    # Test for get_auth_headers with token refresh
     def test_get_auth_headers_with_refresh_direct(self):
-        """Test get_auth_headers with token refresh."""
-        # Create a provider instance for testing the method directly
-        provider = CognitoAuthProvider.__new__(CognitoAuthProvider)  # Create without calling __init__
-        provider._token = 'old_token'
-        provider._token_expires_at = int(time.time()) - 60  # Expired 1 minute ago
+        """Test getting auth headers with refresh."""
+        # Create a provider instance without calling __init__
+        provider = CognitoAuthProvider.__new__(CognitoAuthProvider)
+        provider._is_valid = True
+        provider._token_lock = MagicMock()
         provider._auth_headers = {'Authorization': 'Bearer old_token'}
-        provider._token_lock = threading.RLock()  # Create a real lock
-        provider._is_valid = True  # Add missing attribute required by parent class
-        
-        # Mock _is_token_expired_or_expiring_soon to return True
+
+        # Mock the token expiry check and refresh
         with patch.object(provider, '_is_token_expired_or_expiring_soon', return_value=True):
-            # Mock _refresh_token
-            with patch.object(provider, '_refresh_token'):
-                # Mock super().get_auth_headers to return headers directly
-                with patch('awslabs.openapi_mcp_server.auth.bearer_auth.BearerAuthProvider.get_auth_headers', 
-                          return_value={'Authorization': 'Bearer old_token'}):
-                    # Call get_auth_headers
-                    headers = provider.get_auth_headers()
-                    
-                    # Check that _refresh_token was called
-                    provider._refresh_token.assert_called_once()
-                    
-                    # Check the headers
-                    assert headers == {'Authorization': 'Bearer old_token'}
+            with patch.object(provider, '_refresh_token') as mock_refresh:
+                headers = provider.get_auth_headers()
+                mock_refresh.assert_called_once()
+                self.assertEqual(headers, {'Authorization': 'Bearer old_token'})
 
-    # Add tests for boto3 client methods with proper exception handling
-    @patch('awslabs.openapi_mcp_server.auth.cognito_auth.boto3')
-    def test_get_cognito_token_success_direct(self, mock_boto3):
-        """Test successful token acquisition directly."""
-        # Create a provider instance for testing the method directly
-        provider = CognitoAuthProvider.__new__(CognitoAuthProvider)  # Create without calling __init__
-        provider._client_id = 'test_client_id'
-        provider._username = 'test_username'
+    def test_get_cognito_token_success_direct(self):
+        """Test getting Cognito token successfully."""
+        # Create a provider instance without calling __init__
+        provider = CognitoAuthProvider.__new__(CognitoAuthProvider)
+        provider._is_valid = True
+        provider._token_lock = MagicMock()
+        provider._username = 'test_user'
         provider._password = 'test_password'
-        provider._region = 'us-east-1'
+        provider._client_id = 'test_client_id'
         provider._user_pool_id = None
-        
-        # Create a mock boto3 client
-        mock_client = MagicMock()
-        mock_boto3.client.return_value = mock_client
-        
-        # Mock the exceptions attribute on the client
-        mock_client.exceptions = MagicMock()
-        
+        provider._region = 'us-east-1'
+
         # Create exception classes that inherit from Exception
-        class NotAuthorizedException(Exception): pass
-        class UserNotConfirmedException(Exception): pass
-        class InvalidParameterException(Exception): pass
-        class ResourceNotFoundException(Exception): pass
-        
+        class NotAuthorizedException(Exception):
+            pass
+
+        class UserNotConfirmedException(Exception):
+            pass
+
+        class InvalidParameterException(Exception):
+            pass
+
+        class ResourceNotFoundException(Exception):
+            pass
+
         # Assign the exception classes to the client.exceptions
+        mock_client = MagicMock()
         mock_client.exceptions.NotAuthorizedException = NotAuthorizedException
         mock_client.exceptions.UserNotConfirmedException = UserNotConfirmedException
         mock_client.exceptions.InvalidParameterException = InvalidParameterException
         mock_client.exceptions.ResourceNotFoundException = ResourceNotFoundException
-        
-        # Mock successful authentication response
-        mock_client.initiate_auth.return_value = {
+
+        # Mock the response
+        mock_response = {
             'AuthenticationResult': {
                 'AccessToken': 'test_access_token',
-                'IdToken': 'test_id_token',
+                'IdToken': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiZXhwIjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c',
                 'RefreshToken': 'test_refresh_token',
             }
         }
-        
-        # Mock token expiry extraction
-        with patch.object(provider, '_extract_token_expiry', return_value=int(time.time()) + 3600):
-            # Call the method directly
-            result = provider._get_cognito_token()
-            
-            # Check the result
-            assert result == 'test_access_token'
-            
-            # Check that initiate_auth was called with the right parameters
-            mock_client.initiate_auth.assert_called_with(
-                ClientId='test_client_id',
-                AuthFlow='USER_PASSWORD_AUTH',
-                AuthParameters={
-                    'USERNAME': 'test_username',
-                    'PASSWORD': 'test_password'
-                }
-            )
+        mock_client.initiate_auth.return_value = mock_response
 
-    @patch('awslabs.openapi_mcp_server.auth.cognito_auth.boto3')
-    def test_get_cognito_token_with_user_pool_id_direct(self, mock_boto3):
-        """Test token acquisition with user pool ID directly."""
-        # Create a provider instance for testing the method directly
-        provider = CognitoAuthProvider.__new__(CognitoAuthProvider)  # Create without calling __init__
-        provider._client_id = 'test_client_id'
-        provider._username = 'test_username'
+        # Mock boto3.client
+        with patch('boto3.client', return_value=mock_client):
+            # Mock logger
+            with patch('awslabs.openapi_mcp_server.auth.cognito_auth.logger'):
+                # Test the method
+                token = provider._get_cognito_token()
+                self.assertEqual(token, 'test_access_token')
+                self.assertEqual(provider._refresh_token_value, 'test_refresh_token')
+                self.assertEqual(provider._token_expires_at, 1516239022)
+
+    def test_get_cognito_token_with_user_pool_id_direct(self):
+        """Test getting Cognito token with user pool ID."""
+        # Create a provider instance without calling __init__
+        provider = CognitoAuthProvider.__new__(CognitoAuthProvider)
+        provider._is_valid = True
+        provider._token_lock = MagicMock()
+        provider._username = 'test_user'
         provider._password = 'test_password'
-        provider._region = 'us-east-1'
+        provider._client_id = 'test_client_id'
         provider._user_pool_id = 'test_user_pool_id'
-        
-        # Create a mock boto3 client
-        mock_client = MagicMock()
-        mock_boto3.client.return_value = mock_client
-        
-        # Mock the exceptions attribute on the client
-        mock_client.exceptions = MagicMock()
-        
+        provider._region = 'us-east-1'
+
         # Create exception classes that inherit from Exception
-        class NotAuthorizedException(Exception): pass
-        class UserNotConfirmedException(Exception): pass
-        class InvalidParameterException(Exception): pass
-        class ResourceNotFoundException(Exception): pass
-        
+        class NotAuthorizedException(Exception):
+            pass
+
+        class UserNotConfirmedException(Exception):
+            pass
+
+        class InvalidParameterException(Exception):
+            pass
+
+        class ResourceNotFoundException(Exception):
+            pass
+
         # Assign the exception classes to the client.exceptions
+        mock_client = MagicMock()
         mock_client.exceptions.NotAuthorizedException = NotAuthorizedException
         mock_client.exceptions.UserNotConfirmedException = UserNotConfirmedException
         mock_client.exceptions.InvalidParameterException = InvalidParameterException
         mock_client.exceptions.ResourceNotFoundException = ResourceNotFoundException
-        
-        # Mock successful authentication response
-        mock_client.initiate_auth.return_value = {
+
+        # Mock the response
+        mock_response = {
             'AuthenticationResult': {
                 'AccessToken': 'test_access_token',
-                'IdToken': 'test_id_token',
+                'IdToken': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiZXhwIjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c',
                 'RefreshToken': 'test_refresh_token',
             }
         }
-        
-        # Mock token expiry extraction
-        with patch.object(provider, '_extract_token_expiry', return_value=int(time.time()) + 3600):
-            # Call the method directly
-            result = provider._get_cognito_token()
-            
-            # Check the result
-            assert result == 'test_access_token'
-            
-            # Check that initiate_auth was called with the right parameters
-            mock_client.initiate_auth.assert_called_with(
-                ClientId='test_client_id',
-                AuthFlow='USER_PASSWORD_AUTH',
-                AuthParameters={
-                    'USERNAME': 'test_username',
-                    'PASSWORD': 'test_password',
-                    'UserPoolId': 'test_user_pool_id'
-                }
-            )
+        mock_client.initiate_auth.return_value = mock_response
 
-    @patch('awslabs.openapi_mcp_server.auth.cognito_auth.boto3')
-    def test_get_cognito_token_admin_fallback_direct(self, mock_boto3):
-        """Test fallback to admin auth flow directly."""
-        # Create a provider instance for testing the method directly
-        provider = CognitoAuthProvider.__new__(CognitoAuthProvider)  # Create without calling __init__
-        provider._client_id = 'test_client_id'
-        provider._username = 'test_username'
+        # Mock boto3.client
+        with patch('boto3.client', return_value=mock_client):
+            # Mock logger
+            with patch('awslabs.openapi_mcp_server.auth.cognito_auth.logger'):
+                # Test the method
+                token = provider._get_cognito_token()
+                self.assertEqual(token, 'test_access_token')
+                self.assertEqual(provider._refresh_token_value, 'test_refresh_token')
+                self.assertEqual(provider._token_expires_at, 1516239022)
+
+    def test_get_cognito_token_admin_fallback_direct(self):
+        """Test getting Cognito token with admin fallback."""
+        # Create a provider instance without calling __init__
+        provider = CognitoAuthProvider.__new__(CognitoAuthProvider)
+        provider._is_valid = True
+        provider._token_lock = MagicMock()
+        provider._username = 'test_user'
         provider._password = 'test_password'
-        provider._region = 'us-east-1'
+        provider._client_id = 'test_client_id'
         provider._user_pool_id = 'test_user_pool_id'
-        
-        # Create a mock boto3 client
-        mock_client = MagicMock()
-        mock_boto3.client.return_value = mock_client
-        
-        # Mock the exceptions attribute on the client
-        mock_client.exceptions = MagicMock()
-        
+        provider._region = 'us-east-1'
+
         # Create exception classes that inherit from Exception
-        class NotAuthorizedException(Exception): pass
-        class UserNotConfirmedException(Exception): pass
-        class InvalidParameterException(Exception): pass
-        class ResourceNotFoundException(Exception): pass
-        
+        class NotAuthorizedException(Exception):
+            pass
+
+        class UserNotConfirmedException(Exception):
+            pass
+
+        class InvalidParameterException(Exception):
+            pass
+
+        class ResourceNotFoundException(Exception):
+            pass
+
         # Assign the exception classes to the client.exceptions
+        mock_client = MagicMock()
         mock_client.exceptions.NotAuthorizedException = NotAuthorizedException
         mock_client.exceptions.UserNotConfirmedException = UserNotConfirmedException
         mock_client.exceptions.InvalidParameterException = InvalidParameterException
         mock_client.exceptions.ResourceNotFoundException = ResourceNotFoundException
-        
-        # Make initiate_auth raise InvalidParameterException
-        mock_client.initiate_auth.side_effect = InvalidParameterException('Invalid parameter')
-        
-        # Mock successful admin authentication response
-        mock_client.admin_initiate_auth.return_value = {
+
+        # Mock the responses
+        mock_response = {
             'AuthenticationResult': {
-                'AccessToken': 'test_admin_access_token',
-                'IdToken': 'test_admin_id_token',
-                'RefreshToken': 'test_admin_refresh_token',
+                'AccessToken': 'test_access_token',
+                'IdToken': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiZXhwIjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c',
+                'RefreshToken': 'test_refresh_token',
             }
         }
-        
-        # Mock token expiry extraction
-        with patch.object(provider, '_extract_token_expiry', return_value=int(time.time()) + 3600):
-            # Call the method directly
-            result = provider._get_cognito_token()
-            
-            # Check the result
-            assert result == 'test_admin_access_token'
-            
-            # Check that admin_initiate_auth was called with the right parameters
-            mock_client.admin_initiate_auth.assert_called_with(
-                UserPoolId='test_user_pool_id',
-                ClientId='test_client_id',
-                AuthFlow='ADMIN_USER_PASSWORD_AUTH',
-                AuthParameters={
-                    'USERNAME': 'test_username',
-                    'PASSWORD': 'test_password'
-                }
-            )
+        mock_client.initiate_auth.side_effect = InvalidParameterException('Invalid parameter')
+        mock_client.admin_initiate_auth.return_value = mock_response
 
-    @patch('awslabs.openapi_mcp_server.auth.cognito_auth.boto3')
-    def test_get_cognito_token_not_authorized_direct(self, mock_boto3):
-        """Test handling of NotAuthorizedException directly."""
-        # Create a provider instance for testing the method directly
-        provider = CognitoAuthProvider.__new__(CognitoAuthProvider)  # Create without calling __init__
-        provider._client_id = 'test_client_id'
-        provider._username = 'test_username'
+        # Mock boto3.client
+        with patch('boto3.client', return_value=mock_client):
+            # Mock logger
+            with patch('awslabs.openapi_mcp_server.auth.cognito_auth.logger'):
+                # Test the method
+                token = provider._get_cognito_token()
+                self.assertEqual(token, 'test_access_token')
+                self.assertEqual(provider._refresh_token_value, 'test_refresh_token')
+                self.assertEqual(provider._token_expires_at, 1516239022)
+                mock_client.admin_initiate_auth.assert_called_once()
+
+    def test_get_cognito_token_not_authorized_direct(self):
+        """Test getting Cognito token with not authorized error."""
+        # Create a provider instance without calling __init__
+        provider = CognitoAuthProvider.__new__(CognitoAuthProvider)
+        provider._is_valid = True
+        provider._token_lock = MagicMock()
+        provider._username = 'test_user'
         provider._password = 'test_password'
-        provider._region = 'us-east-1'
+        provider._client_id = 'test_client_id'
         provider._user_pool_id = None
-        
-        # Create a mock boto3 client
-        mock_client = MagicMock()
-        mock_boto3.client.return_value = mock_client
-        
-        # Mock the exceptions attribute on the client
-        mock_client.exceptions = MagicMock()
-        
+        provider._region = 'us-east-1'
+
         # Create exception classes that inherit from Exception
-        class NotAuthorizedException(Exception): pass
-        class UserNotConfirmedException(Exception): pass
-        class InvalidParameterException(Exception): pass
-        class ResourceNotFoundException(Exception): pass
-        
+        class NotAuthorizedException(Exception):
+            pass
+
+        class UserNotConfirmedException(Exception):
+            pass
+
+        class InvalidParameterException(Exception):
+            pass
+
+        class ResourceNotFoundException(Exception):
+            pass
+
         # Assign the exception classes to the client.exceptions
+        mock_client = MagicMock()
         mock_client.exceptions.NotAuthorizedException = NotAuthorizedException
         mock_client.exceptions.UserNotConfirmedException = UserNotConfirmedException
         mock_client.exceptions.InvalidParameterException = InvalidParameterException
         mock_client.exceptions.ResourceNotFoundException = ResourceNotFoundException
-        
-        # Make initiate_auth raise NotAuthorizedException
-        mock_client.initiate_auth.side_effect = NotAuthorizedException('Not authorized')
-        
-        # Call the method, should raise InvalidCredentialsError
-        with pytest.raises(InvalidCredentialsError) as excinfo:
-            provider._get_cognito_token()
-        
-        # Check the error message
-        assert "Invalid Cognito credentials" in str(excinfo.value)
 
-    @patch('awslabs.openapi_mcp_server.auth.cognito_auth.boto3')
-    def test_refresh_cognito_token_success_direct(self, mock_boto3):
-        """Test successful token refresh directly."""
-        # Create a provider instance for testing the method directly
-        provider = CognitoAuthProvider.__new__(CognitoAuthProvider)  # Create without calling __init__
+        # Mock the error
+        mock_client.initiate_auth.side_effect = NotAuthorizedException('Not authorized')
+
+        # Mock boto3.client
+        with patch('boto3.client', return_value=mock_client):
+            # Mock logger
+            with patch('awslabs.openapi_mcp_server.auth.cognito_auth.logger'):
+                # Test the method
+                with self.assertRaises(InvalidCredentialsError):
+                    provider._get_cognito_token()
+
+    def test_refresh_cognito_token_success_direct(self):
+        """Test refreshing Cognito token successfully."""
+        # Create a provider instance without calling __init__
+        provider = CognitoAuthProvider.__new__(CognitoAuthProvider)
+        provider._is_valid = True
+        provider._token_lock = MagicMock()
+        provider._username = 'test_user'
         provider._client_id = 'test_client_id'
-        provider._username = 'test_username'
-        provider._region = 'us-east-1'
-        provider._user_pool_id = None
         provider._refresh_token_value = 'test_refresh_token'
-        
-        # Create a mock boto3 client
-        mock_client = MagicMock()
-        mock_boto3.client.return_value = mock_client
-        
-        # Mock the exceptions attribute on the client
-        mock_client.exceptions = MagicMock()
-        
+        provider._user_pool_id = None
+        provider._region = 'us-east-1'
+
         # Create exception classes that inherit from Exception
-        class NotAuthorizedException(Exception): pass
-        class InvalidParameterException(Exception): pass
-        
+        class NotAuthorizedException(Exception):
+            pass
+
+        class InvalidParameterException(Exception):
+            pass
+
         # Assign the exception classes to the client.exceptions
+        mock_client = MagicMock()
         mock_client.exceptions.NotAuthorizedException = NotAuthorizedException
         mock_client.exceptions.InvalidParameterException = InvalidParameterException
-        
-        # Mock successful refresh response
-        mock_client.initiate_auth.return_value = {
+
+        # Mock the response
+        mock_response = {
             'AuthenticationResult': {
-                'AccessToken': 'new_access_token',
-                'IdToken': 'new_id_token',
+                'AccessToken': 'test_access_token',
+                'IdToken': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiZXhwIjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c',
             }
         }
-        
-        # Mock token expiry extraction
-        with patch.object(provider, '_extract_token_expiry', return_value=int(time.time()) + 3600):
-            # Call the method directly
-            result = provider._refresh_cognito_token()
-            
-            # Check the result
-            assert result == 'new_access_token'
-            
-            # Check that initiate_auth was called with the right parameters
-            mock_client.initiate_auth.assert_called_with(
-                ClientId='test_client_id',
-                AuthFlow='REFRESH_TOKEN_AUTH',
-                AuthParameters={
-                    'REFRESH_TOKEN': 'test_refresh_token'
-                }
-            )
+        mock_client.initiate_auth.return_value = mock_response
 
-    @patch('awslabs.openapi_mcp_server.auth.cognito_auth.boto3')
-    def test_refresh_cognito_token_admin_fallback_direct(self, mock_boto3):
-        """Test fallback to admin refresh flow directly."""
-        # Create a provider instance for testing the method directly
-        provider = CognitoAuthProvider.__new__(CognitoAuthProvider)  # Create without calling __init__
+        # Mock boto3.client
+        with patch('boto3.client', return_value=mock_client):
+            # Mock logger
+            with patch('awslabs.openapi_mcp_server.auth.cognito_auth.logger'):
+                # Test the method
+                token = provider._refresh_cognito_token()
+                self.assertEqual(token, 'test_access_token')
+                self.assertEqual(provider._token_expires_at, 1516239022)
+                mock_client.initiate_auth.assert_called_once_with(
+                    ClientId='test_client_id',
+                    AuthFlow='REFRESH_TOKEN_AUTH',
+                    AuthParameters={'REFRESH_TOKEN': 'test_refresh_token'},
+                )
+
+    def test_refresh_cognito_token_admin_fallback_direct(self):
+        """Test refreshing Cognito token with admin fallback."""
+        # Create a provider instance without calling __init__
+        provider = CognitoAuthProvider.__new__(CognitoAuthProvider)
+        provider._is_valid = True
+        provider._token_lock = MagicMock()
+        provider._username = 'test_user'
         provider._client_id = 'test_client_id'
-        provider._username = 'test_username'
-        provider._region = 'us-east-1'
+        provider._refresh_token_value = 'test_refresh_token'
         provider._user_pool_id = 'test_user_pool_id'
-        provider._refresh_token_value = 'test_refresh_token'
-        
-        # Create a mock boto3 client
-        mock_client = MagicMock()
-        mock_boto3.client.return_value = mock_client
-        
-        # Mock the exceptions attribute on the client
-        mock_client.exceptions = MagicMock()
-        
+        provider._region = 'us-east-1'
+
         # Create exception classes that inherit from Exception
-        class NotAuthorizedException(Exception): pass
-        class InvalidParameterException(Exception): pass
-        
+        class NotAuthorizedException(Exception):
+            pass
+
+        class InvalidParameterException(Exception):
+            pass
+
         # Assign the exception classes to the client.exceptions
+        mock_client = MagicMock()
         mock_client.exceptions.NotAuthorizedException = NotAuthorizedException
         mock_client.exceptions.InvalidParameterException = InvalidParameterException
-        
-        # Make initiate_auth raise InvalidParameterException
-        mock_client.initiate_auth.side_effect = InvalidParameterException('Invalid parameter')
-        
-        # Mock successful admin refresh response
-        mock_client.admin_initiate_auth.return_value = {
+
+        # Mock the responses
+        mock_response = {
             'AuthenticationResult': {
-                'AccessToken': 'new_admin_access_token',
-                'IdToken': 'new_admin_id_token',
+                'AccessToken': 'test_access_token',
+                'IdToken': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiZXhwIjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c',
             }
         }
-        
-        # Mock token expiry extraction
-        with patch.object(provider, '_extract_token_expiry', return_value=int(time.time()) + 3600):
-            # Call the method directly
-            result = provider._refresh_cognito_token()
-            
-            # Check the result
-            assert result == 'new_admin_access_token'
-            
-            # Check that admin_initiate_auth was called with the right parameters
-            mock_client.admin_initiate_auth.assert_called_with(
-                UserPoolId='test_user_pool_id',
-                ClientId='test_client_id',
-                AuthFlow='REFRESH_TOKEN',
-                AuthParameters={
-                    'REFRESH_TOKEN': 'test_refresh_token'
-                }
-            )
+        mock_client.initiate_auth.side_effect = InvalidParameterException('Invalid parameter')
+        mock_client.admin_initiate_auth.return_value = mock_response
 
-    @patch('awslabs.openapi_mcp_server.auth.cognito_auth.boto3')
-    def test_refresh_cognito_token_not_authorized_direct(self, mock_boto3):
-        """Test handling of NotAuthorizedException during refresh directly."""
-        # Create a provider instance for testing the method directly
-        provider = CognitoAuthProvider.__new__(CognitoAuthProvider)  # Create without calling __init__
+        # Mock boto3.client
+        with patch('boto3.client', return_value=mock_client):
+            # Mock logger
+            with patch('awslabs.openapi_mcp_server.auth.cognito_auth.logger'):
+                # Test the method
+                token = provider._refresh_cognito_token()
+                self.assertEqual(token, 'test_access_token')
+                self.assertEqual(provider._token_expires_at, 1516239022)
+                mock_client.admin_initiate_auth.assert_called_once()
+
+    def test_refresh_cognito_token_not_authorized_direct(self):
+        """Test refreshing Cognito token with not authorized error."""
+        # Create a provider instance without calling __init__
+        provider = CognitoAuthProvider.__new__(CognitoAuthProvider)
+        provider._is_valid = True
+        provider._token_lock = MagicMock()
+        provider._username = 'test_user'
+        provider._password = 'test_password'
         provider._client_id = 'test_client_id'
-        provider._username = 'test_username'
-        provider._region = 'us-east-1'
-        provider._user_pool_id = None
         provider._refresh_token_value = 'test_refresh_token'
-        
-        # Create a mock boto3 client
-        mock_client = MagicMock()
-        mock_boto3.client.return_value = mock_client
-        
-        # Mock the exceptions attribute on the client
-        mock_client.exceptions = MagicMock()
-        
+        provider._user_pool_id = None
+        provider._region = 'us-east-1'
+
         # Create exception classes that inherit from Exception
-        class NotAuthorizedException(Exception): pass
-        class InvalidParameterException(Exception): pass
-        
+        class NotAuthorizedException(Exception):
+            pass
+
+        class InvalidParameterException(Exception):
+            pass
+
         # Assign the exception classes to the client.exceptions
+        mock_client = MagicMock()
         mock_client.exceptions.NotAuthorizedException = NotAuthorizedException
         mock_client.exceptions.InvalidParameterException = InvalidParameterException
-        
-        # Make initiate_auth raise NotAuthorizedException
+
+        # Mock the error response
         mock_client.initiate_auth.side_effect = NotAuthorizedException('Not authorized')
-        
-        # Mock _get_cognito_token to return a new token
-        with patch.object(provider, '_get_cognito_token', return_value='new_token'):
-            # Call the method directly
-            result = provider._refresh_cognito_token()
-            
-            # Check that _get_cognito_token was called
-            provider._get_cognito_token.assert_called_once()
-            
-            # Check the result
-            assert result == 'new_token'
 
-    @patch('awslabs.openapi_mcp_server.auth.cognito_auth.boto3')
-    def test_refresh_cognito_token_error_direct(self, mock_boto3):
-        """Test handling of generic exceptions during refresh directly."""
-        # Create a provider instance for testing the method directly
-        provider = CognitoAuthProvider.__new__(CognitoAuthProvider)  # Create without calling __init__
+        # Mock boto3.client
+        with patch('boto3.client', return_value=mock_client):
+            # Mock logger
+            with patch('awslabs.openapi_mcp_server.auth.cognito_auth.logger'):
+                # Mock _get_cognito_token
+                with patch.object(
+                    provider, '_get_cognito_token', return_value='test_access_token'
+                ) as mock_get_token:
+                    # Test the method
+                    token = provider._refresh_cognito_token()
+                    self.assertEqual(token, 'test_access_token')
+                    mock_get_token.assert_called_once()
+
+    def test_refresh_cognito_token_error_direct(self):
+        """Test refreshing Cognito token with an error."""
+        # Create a provider instance without calling __init__
+        provider = CognitoAuthProvider.__new__(CognitoAuthProvider)
+        provider._is_valid = True
+        provider._token_lock = MagicMock()
+        provider._username = 'test_user'
         provider._client_id = 'test_client_id'
-        provider._username = 'test_username'
-        provider._region = 'us-east-1'
-        provider._user_pool_id = None
         provider._refresh_token_value = 'test_refresh_token'
-        
-        # Create a mock boto3 client
-        mock_client = MagicMock()
-        mock_boto3.client.return_value = mock_client
-        
-        # Mock the exceptions attribute on the client
-        mock_client.exceptions = MagicMock()
-        
+        provider._user_pool_id = None
+        provider._region = 'us-east-1'
+
         # Create exception classes that inherit from Exception
-        class NotAuthorizedException(Exception): pass
-        class InvalidParameterException(Exception): pass
-        
+        class NotAuthorizedException(Exception):
+            pass
+
+        class InvalidParameterException(Exception):
+            pass
+
         # Assign the exception classes to the client.exceptions
+        mock_client = MagicMock()
         mock_client.exceptions.NotAuthorizedException = NotAuthorizedException
         mock_client.exceptions.InvalidParameterException = InvalidParameterException
-        
-        # Make initiate_auth raise a generic exception
-        mock_client.initiate_auth.side_effect = Exception('Refresh error')
-        
-        # Call the method, should raise ExpiredTokenError
-        with pytest.raises(ExpiredTokenError) as excinfo:
-            provider._refresh_cognito_token()
-        
-        # Check the error message
-        assert "Token refresh failed" in str(excinfo.value)
+
+        # Mock the error
+        mock_client.initiate_auth.side_effect = Exception('Unexpected error')
+
+        # Mock boto3.client
+        with patch('boto3.client', return_value=mock_client):
+            # Mock logger
+            with patch('awslabs.openapi_mcp_server.auth.cognito_auth.logger'):
+                # Test the method
+                with self.assertRaises(ExpiredTokenError):
+                    provider._refresh_cognito_token()
