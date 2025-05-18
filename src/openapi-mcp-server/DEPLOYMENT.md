@@ -1,5 +1,7 @@
 # Deployment Guide for OpenAPI MCP Server
 
+[← Back to main README](README.md)
+
 This document provides guidance on deploying the OpenAPI MCP Server in various environments, with a focus on AWS deployment options and considerations for the Server-Sent Events (SSE) transport.
 
 ## Building and Deploying with Docker
@@ -71,6 +73,41 @@ You can customize the container behavior using environment variables:
 -e PROMETHEUS_PORT=9090 \
 -e ENABLE_OPERATION_PROMPTS=true
 ```
+
+### Graceful Shutdown
+
+The OpenAPI MCP Server implements a robust graceful shutdown mechanism to ensure clean termination when the server is stopped or interrupted. This is particularly important for production deployments where abrupt termination could lead to connection errors, data loss, or incomplete operations.
+
+#### How Graceful Shutdown Works
+
+When the server receives a termination signal (SIGINT from Ctrl+C or SIGTERM from container orchestrators):
+
+1. The server logs that it's shutting down gracefully
+2. Final metrics are logged to provide visibility into the server's state at shutdown
+3. For SIGINT (Ctrl+C), the server chains to the original handler after logging
+4. Uvicorn's built-in graceful shutdown process handles the actual shutdown
+5. Active connections are allowed to complete before the server exits
+
+#### Configuration Options
+
+The server's graceful shutdown can be configured through uvicorn options:
+
+```bash
+# Set a custom timeout for graceful shutdown (in seconds)
+-e UVICORN_TIMEOUT_GRACEFUL_SHUTDOWN=5.0
+
+# Enable/disable graceful shutdown (default: true)
+-e UVICORN_GRACEFUL_SHUTDOWN=true
+```
+
+#### Best Practices for Container Environments
+
+When running in container environments like Docker, Kubernetes, or ECS:
+
+1. **Set appropriate termination grace periods** - Allow enough time for connections to complete
+2. **Use SIGTERM for orchestrated shutdowns** - Container orchestrators typically send SIGTERM
+3. **Configure health checks** - Ensure they fail appropriately during shutdown
+4. **Monitor shutdown metrics** - Track shutdown times and any errors during shutdown
 
 ### Deploying to AWS
 

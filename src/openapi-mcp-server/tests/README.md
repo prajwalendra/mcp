@@ -1,5 +1,7 @@
 # OpenAPI MCP Server Tests
 
+[← Back to main README](../README.md)
+
 This directory contains tests for the OpenAPI MCP Server project.
 
 ## Test Structure
@@ -19,6 +21,8 @@ The tests are organized by module:
   - `test_cache_provider.py`: Tests for the cache provider module
   - `test_http_client.py`: Tests for the HTTP client utilities
   - `test_metrics_provider.py`: Tests for the metrics provider module
+  - `test_metrics_provider_prometheus.py`: Tests for the Prometheus metrics provider (skipped if prometheus_client not installed)
+  - `test_metrics_provider_decorators.py`: Tests for the metrics provider decorators
   - `test_openapi_validator.py`: Tests for the OpenAPI validation utilities
 
 - `tests/test_init.py`: Tests for module initialization
@@ -71,7 +75,7 @@ The tests aim to cover:
 Some tests can be influenced by environment variables:
 
 - `ENABLE_CACHETOOLS=true`: Test with cachetools integration
-- `ENABLE_PROMETHEUS=true`: Test with Prometheus metrics
+- `ENABLE_PROMETHEUS=true`: Test with Prometheus metrics (requires prometheus_client package)
 - `ENABLE_TENACITY=true`: Test with tenacity retry logic
 - `ENABLE_OPENAPI_CORE=true`: Test with openapi-core validation
 - `ENABLE_OPERATION_PROMPTS=true`: Test with operation-specific prompts

@@ -1,5 +1,7 @@
 # Authentication for OpenAPI MCP Server
 
+[← Back to main README](README.md)
+
 ## Supported Authentication Methods
 
 The OpenAPI MCP Server supports five authentication methods:

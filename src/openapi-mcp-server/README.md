@@ -5,13 +5,17 @@ This project is a server that dynamically creates Machine Conversation Protocol 
 ## Features
 
 - **Dynamic Tool Generation**: Automatically creates MCP tools from OpenAPI endpoints
+- **Intelligent Route Mapping**: Maps GET operations with query parameters to TOOLS instead of RESOURCES
+  - Makes API operations with query parameters easier for LLMs to understand and use
+  - Improves usability of search and filtering endpoints
+  - Configurable via the route_patch module
 - **Dynamic Prompt Generation**: Creates helpful prompts based on API structure
   - **Operation-Specific Prompts**: Generates natural language prompts for each API operation
   - **API Documentation Prompts**: Creates comprehensive API documentation prompts
 - **Multiple Transport Options**: Supports SSE and stdio transports
 - **Flexible Configuration**: Configure via environment variables or command line arguments
 - **OpenAPI Support**: Works with OpenAPI 3.x specifications in JSON or YAML format
-- **Authentication Support**: Supports multiple authentication methods (Basic, Bearer Token, API Key)
+- **Authentication Support**: Supports multiple authentication methods (Basic, Bearer Token, API Key, Cognito)
 - **AWS Best Practices**: Implements AWS best practices for caching, resilience, and observability
 - **Comprehensive Testing**: Includes extensive unit and integration tests with high code coverage
 - **Metrics Collection**: Tracks API calls, tool usage, errors, and performance metrics
@@ -22,6 +26,24 @@ This project is a server that dynamically creates Machine Conversation Protocol 
 
 ```bash
 pip install "awslabs.openapi-mcp-server"
+```
+
+### Optional Dependencies
+
+The package supports several optional dependencies:
+
+```bash
+# For YAML OpenAPI specification support
+pip install "awslabs.openapi-mcp-server[yaml]"
+
+# For Prometheus metrics support
+pip install "awslabs.openapi-mcp-server[prometheus]"
+
+# For testing
+pip install "awslabs.openapi-mcp-server[test]"
+
+# For all optional dependencies
+pip install "awslabs.openapi-mcp-server[all]"
 ```
 
 ### From Source
@@ -45,10 +67,12 @@ Here are some ways you can work with MCP across AWS (e.g. for Amazon Q Developer
       "env": {
         "API_NAME": "your-api-name",
         "API_BASE_URL": "https://api.example.com",
-        "API_SPEC_URL": "https://api.example.com/openapi.json",
-        "LOG_LEVEL": "ERROR",
-        "ENABLE_PROMETHEUS": "false",
-        "ENABLE_OPERATION_PROMPTS": "true"
+          "API_SPEC_URL": "https://api.example.com/openapi.json",
+          "LOG_LEVEL": "ERROR",
+          "ENABLE_PROMETHEUS": "false",
+          "ENABLE_OPERATION_PROMPTS": "true",
+          "UVICORN_TIMEOUT_GRACEFUL_SHUTDOWN": "5.0",
+          "UVICORN_GRACEFUL_SHUTDOWN": "true"
       },
       "disabled": false,
       "autoApprove": []
@@ -77,14 +101,16 @@ awslabs.openapi-mcp-server --api-name myapi --api-url https://api.example.com --
 
 ```bash
 # Basic Authentication
-awslabs.openapi-mcp-server --api-name myapi --api-url https://api.example.com --spec-url https://api.example.com/openapi.json --auth-type basic --auth-username YOUR_USERNAME --auth-password YOUR_PASSWORD # pragma: allowlist secret
+awslabs.openapi-mcp-server --api-url https://api.example.com --spec-url https://api.example.com/openapi.json --auth-type basic --auth-username YOUR_USERNAME --auth-password YOUR_PASSWORD # pragma: allowlist secret
 
 # Bearer Token Authentication
-awslabs.openapi-mcp-server --api-name myapi --api-url https://api.example.com --spec-url https://api.example.com/openapi.json --auth-type bearer --auth-token YOUR_TOKEN # pragma: allowlist secret
+awslabs.openapi-mcp-server --api-url https://api.example.com --spec-url https://api.example.com/openapi.json --auth-type bearer --auth-token YOUR_TOKEN # pragma: allowlist secret
 
 # API Key Authentication (in header)
-awslabs.openapi-mcp-server --api-name myapi --api-url https://api.example.com --spec-url https://api.example.com/openapi.json --auth-type api_key --auth-api-key YOUR_API_KEY --auth-api-key-name X-API-Key --auth-api-key-in header # pragma: allowlist secret
+awslabs.openapi-mcp-server --api-url https://api.example.com --spec-url https://api.example.com/openapi.json --auth-type api_key --auth-api-key YOUR_API_KEY --auth-api-key-name X-API-Key --auth-api-key-in header # pragma: allowlist secret
 ```
+
+For detailed information about authentication methods, configuration options, and examples, see [AUTHENTICATION.md](AUTHENTICATION.md).
 
 ### Local OpenAPI Specification
 
@@ -100,6 +126,34 @@ awslabs.openapi-mcp-server --spec-path ./openapi.json
 pip install "awslabs.openapi-mcp-server[yaml]"
 awslabs.openapi-mcp-server --spec-path ./openapi.yaml
 ```
+
+### Local Development and Testing
+
+For local development and testing, you can use the `uvx` command with the `--refresh` and `--from` options:
+
+```bash
+# Run the server from the local directory with the Petstore API
+uvx --refresh --from . awslabs.openapi-mcp-server --api-url https://petstore3.swagger.io/api/v3 --spec-url https://petstore3.swagger.io/api/v3/openapi.json --log-level DEBUG --sse
+```
+
+**Command Options Explained:**
+
+- `uvx` - The uv package manager's execution tool for running Python packages
+- `--refresh` - Refreshes the package cache to ensure the latest version is used (important during development)
+- `--from .` - Uses the package from the current directory instead of installing from PyPI
+- `awslabs.openapi-mcp-server` - The package name to run
+- `--api-url` - The base URL of the API
+- `--spec-url` - The URL of the OpenAPI specification
+- `--log-level DEBUG` - Sets the logging level to DEBUG for more detailed logs (useful for development)
+- `--sse` - Enables the Server-Sent Events (SSE) transport for web-based clients
+
+**When to Use These Options:**
+
+- Use `--refresh` when you've made changes to your code and want to ensure the latest version is used
+- Use `--log-level DEBUG` when you need detailed logs for troubleshooting or development
+- Use `--sse` when you need to test with web-based clients that require Server-Sent Events
+
+**Note:** The Petstore API is a standard OpenAPI schema endpoint that can be used for simple testing without any API authentication configuration. It's perfect for testing your MCP server implementation without setting up your own API.
 
 ## Configuration
 
@@ -120,6 +174,10 @@ export ENABLE_PROMETHEUS="false"  # Enable/disable Prometheus metrics (default: 
 export PROMETHEUS_PORT=9090  # Port for Prometheus metrics server
 export ENABLE_OPERATION_PROMPTS="true"  # Enable/disable operation-specific prompts (default: true)
 
+# Graceful shutdown configuration
+export UVICORN_TIMEOUT_GRACEFUL_SHUTDOWN=5.0  # Timeout for graceful shutdown in seconds
+export UVICORN_GRACEFUL_SHUTDOWN=true  # Enable/disable graceful shutdown
+
 # API configuration
 export API_NAME="myapi"
 export API_BASE_URL="https://api.example.com"
@@ -135,6 +193,16 @@ export AUTH_API_KEY="PLACEHOLDER_API_KEY"  # For API key authentication # pragma
 export AUTH_API_KEY_NAME="X-API-Key"  # Name of the API key (default: api_key)
 export AUTH_API_KEY_IN="header"  # Where to place the API key (options: header, query, cookie)
 ```
+
+## Documentation
+
+The OpenAPI MCP Server includes comprehensive documentation to help you get started and make the most of its features:
+
+- [**AUTHENTICATION.md**](AUTHENTICATION.md): Detailed information about authentication methods, configuration options, and troubleshooting
+- [**DEPLOYMENT.md**](DEPLOYMENT.md): Guidelines for deploying the server in various environments, including Docker and AWS
+- [**AWS_BEST_PRACTICES.md**](AWS_BEST_PRACTICES.md): AWS best practices implemented in the server for resilience, caching, and efficiency
+- [**OBSERVABILITY.md**](OBSERVABILITY.md): Information about metrics, logging, and monitoring capabilities
+- [**tests/README.md**](tests/README.md): Overview of the test structure and strategy
 
 ## AWS Best Practices
 
@@ -165,6 +233,8 @@ docker run -p 8000:8000 \
   -e SERVER_TRANSPORT=sse \
   -e ENABLE_PROMETHEUS=false \
   -e ENABLE_OPERATION_PROMPTS=true \
+  -e UVICORN_TIMEOUT_GRACEFUL_SHUTDOWN=5.0 \
+  -e UVICORN_GRACEFUL_SHUTDOWN=true \
   openapi-mcp-server:latest
 ```
 
@@ -211,7 +281,7 @@ This server acts as a bridge between OpenAPI specifications and LLMs, allowing m
 1. **Dynamic Tool Generation**: Automatically creates MCP tools from your API endpoints
 2. **Operation-Specific Prompts**: Generates natural language prompts for each API operation
 3. **API Documentation**: Creates comprehensive documentation prompts for the entire API
-4. **Authentication Support**: Works with Basic Auth, Bearer Token, and API Key authentication
+4. **Authentication Support**: Works with Basic Auth, Bearer Token, API Key, and Cognito authentication
 
 ### Getting Started
 
@@ -257,6 +327,8 @@ To test the OpenAPI MCP Server with Amazon Q, you need to configure Amazon Q to 
            "LOG_LEVEL": "INFO",
            "ENABLE_PROMETHEUS": "false",
            "ENABLE_OPERATION_PROMPTS": "true",
+           "UVICORN_TIMEOUT_GRACEFUL_SHUTDOWN": "5.0",
+           "UVICORN_GRACEFUL_SHUTDOWN": "true",
            "PYTHONPATH": "/path/to/your/openapi-mcp-server"
          },
          "disabled": false,
