@@ -74,20 +74,15 @@ class TestOpenAPIUtils:
         # Setup mock response
         mock_response = MagicMock()
         mock_response.status_code = 200
+        mock_response.content = b'{"invalid": "spec"}'  # Return bytes content
         mock_response.json.return_value = {'invalid': 'spec'}
         mock_get.return_value = mock_response
 
-        # Create a test function that directly calls the validation
-        def test_func():
-            with patch(
-                'awslabs.openapi_mcp_server.utils.openapi_validator.validate_openapi_spec',
-                return_value=False,
-            ):
+        # Mock the validate_openapi_spec function directly
+        with patch('awslabs.openapi_mcp_server.utils.openapi.validate_openapi_spec', return_value=False):
+            # Test ValueError is raised for invalid spec
+            with pytest.raises(ValueError, match='Invalid OpenAPI specification'):
                 load_openapi_spec(url='https://example.com/api.json')
-
-        # Test ValueError is raised for invalid spec
-        with pytest.raises(ValueError, match='Invalid OpenAPI specification'):
-            test_func()
 
     @patch('pathlib.Path.exists', return_value=False)
     def test_path_not_found(self, mock_exists):

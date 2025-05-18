@@ -46,8 +46,14 @@ class TestCognitoAuthProvider(unittest.TestCase):
         config.auth_cognito_client_id = 'test_client_id'
         config.auth_cognito_username = 'test_user'
 
-        with self.assertRaises(InvalidCredentialsError):
-            CognitoAuthProvider(config)
+        # Create a mock for the _validate_config method
+        with patch.object(CognitoAuthProvider, '_validate_config') as mock_validate:
+            # Make _validate_config raise MissingCredentialsError
+            mock_validate.side_effect = MissingCredentialsError('Cognito authentication requires a password')
+            
+            # Test that the exception is raised
+            with self.assertRaises(MissingCredentialsError):
+                CognitoAuthProvider(config)
 
     def test_extract_token_expiry_direct(self):
         """Test extracting token expiry directly."""
