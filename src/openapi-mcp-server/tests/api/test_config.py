@@ -27,7 +27,7 @@ def test_config_custom_values():
         auth_type='basic',
         auth_username='user',
         auth_password='pass',
-        host='0.0.0.0',
+        host='127.0.0.1',
         port=9000,
         transport='sse',
         version='1.0.0',
@@ -40,7 +40,7 @@ def test_config_custom_values():
     assert config.auth_type == 'basic'
     assert config.auth_username == 'user'
     assert config.auth_password == 'pass'
-    assert config.host == '0.0.0.0'
+    assert config.host == '127.0.0.1'
     assert config.port == 9000
     assert config.transport == 'sse'
     assert config.version == '1.0.0'
@@ -97,7 +97,7 @@ def test_load_config_environment_variables():
         os.environ['API_SPEC_PATH'] = '/path/to/env-spec.json'
         os.environ['SERVER_PORT'] = '7777'
         os.environ['SERVER_TRANSPORT'] = 'stdio'
-        os.environ['SERVER_HOST'] = '0.0.0.0'
+        os.environ['SERVER_HOST'] = '127.0.0.1'
         os.environ['AUTH_TYPE'] = 'bearer'
         os.environ['AUTH_TOKEN'] = 'env-token'
         os.environ['LOG_LEVEL'] = 'DEBUG'
@@ -112,7 +112,7 @@ def test_load_config_environment_variables():
         assert config.api_spec_path == '/path/to/env-spec.json'
         assert config.port == 7777
         assert config.transport == 'stdio'
-        assert config.host == '0.0.0.0'
+        assert config.host == '127.0.0.1'
         assert config.auth_type == 'bearer'
         assert config.auth_token == 'env-token'
     finally:
