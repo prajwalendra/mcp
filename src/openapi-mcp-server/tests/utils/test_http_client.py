@@ -1,81 +1,153 @@
-"""Tests for the HTTP client module."""
+"""Tests for the HTTP client utilities."""
 
 import httpx
+import pytest
 from awslabs.openapi_mcp_server.utils.http_client import (
     HttpClientFactory,
+    make_request,
+    make_request_with_retry,
 )
-from unittest.mock import patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 
-def test_http_client_factory_create_client():
-    """Test creating an HTTP client with default settings."""
-    with patch('httpx.AsyncClient') as mock_client:
-        # Create a client
-        HttpClientFactory.create_client(base_url='https://test.api.com')
+@pytest.mark.asyncio
+async def test_http_client_factory():
+    """Test creating an HTTP client using the factory."""
+    # Test with default parameters
+    client = HttpClientFactory.create_client('https://example.com')
+    assert isinstance(client, httpx.AsyncClient)
+    assert client._base_url == httpx.URL('https://example.com')
+    await client.aclose()
 
-        # Check that AsyncClient was called with the right parameters
-        mock_client.assert_called_once()
-        call_args = mock_client.call_args[1]
-        assert call_args['base_url'] == 'https://test.api.com'
-        assert isinstance(call_args['timeout'], httpx.Timeout)  # Check type instead of exact value
-        assert call_args['follow_redirects'] is True
+    # Test with auth
+    auth = httpx.BasicAuth(username='test', password='test')
+    client = HttpClientFactory.create_client('https://example.com', auth=auth)
+    assert isinstance(client, httpx.AsyncClient)
+    assert client._auth == auth
+    await client.aclose()
 
-
-def test_http_client_factory_create_client_with_custom_settings():
-    """Test creating an HTTP client with custom settings."""
-    with patch('httpx.AsyncClient') as mock_client:
-        # Create headers and auth
-        headers = {'X-API-Key': 'test-key'}
-        auth = httpx.BasicAuth(username='user', password='pass')
-        cookies = {'session': 'test-session'}
-
-        # Create a client with custom settings
-        HttpClientFactory.create_client(
-            base_url='https://test.api.com',
-            headers=headers,
-            auth=auth,
-            cookies=cookies,
-            timeout=10.0,
-            follow_redirects=False,
-            max_connections=50,
-            max_keepalive=25,
-        )
-
-        # Check that AsyncClient was called with the right parameters
-        mock_client.assert_called_once()
-        call_args = mock_client.call_args[1]
-        assert call_args['base_url'] == 'https://test.api.com'
-        assert call_args['headers'] == headers
-        assert call_args['auth'] == auth
-        assert call_args['cookies'] == cookies
-        assert isinstance(call_args['timeout'], httpx.Timeout)  # Check type instead of exact value
-        assert call_args['follow_redirects'] is False
-        assert call_args['limits'].max_connections == 50
-        assert call_args['limits'].max_keepalive_connections == 25
+    # Test with headers
+    headers = {'X-Test': 'test'}
+    client = HttpClientFactory.create_client('https://example.com', headers=headers)
+    assert isinstance(client, httpx.AsyncClient)
+    assert 'X-Test' in client._headers
+    assert client._headers['X-Test'] == 'test'
+    await client.aclose()
 
 
-def test_http_client_factory_create_client_with_default_limits():
-    """Test creating an HTTP client with default connection limits."""
-    with patch('httpx.AsyncClient') as mock_client:
-        with patch('awslabs.openapi_mcp_server.utils.http_client.HTTP_MAX_CONNECTIONS', 100):
-            with patch('awslabs.openapi_mcp_server.utils.http_client.HTTP_MAX_KEEPALIVE', 20):
-                # Create a client
-                HttpClientFactory.create_client(base_url='https://test.api.com')
+@pytest.mark.asyncio
+@patch('httpx.AsyncClient.request')
+async def test_make_request(mock_request):
+    """Test making a request."""
+    # Setup mock
+    mock_response = MagicMock()
+    mock_response.status_code = 200
+    mock_response.json.return_value = {'test': 'data'}
+    mock_response.raise_for_status = MagicMock()
+    mock_request.return_value = mock_response
 
-                # Check that AsyncClient was called with the right parameters
-                mock_client.assert_called_once()
-                call_args = mock_client.call_args[1]
-                assert call_args['limits'].max_connections == 100
-                assert call_args['limits'].max_keepalive_connections == 20
+    # Test with default parameters
+    client = HttpClientFactory.create_client('https://example.com')
+    response = await make_request(client, 'GET', '/test')
+    assert response.status_code == 200
+    assert response.json() == {'test': 'data'}
+    mock_request.assert_called_once()
+    await client.aclose()
 
 
-@patch('awslabs.openapi_mcp_server.utils.http_client.TENACITY_AVAILABLE', True)
-def test_http_client_factory_with_tenacity():
-    """Test HTTP client factory when tenacity is available."""
-    # This test just verifies that the code path works when tenacity is available
-    with patch('httpx.AsyncClient') as mock_client:
-        # Create a client
-        HttpClientFactory.create_client(base_url='https://test.api.com')
+@pytest.mark.asyncio
+@patch('httpx.AsyncClient.request')
+async def test_make_request_with_params(mock_request):
+    """Test making a request with parameters."""
+    # Setup mock
+    mock_response = MagicMock()
+    mock_response.status_code = 200
+    mock_response.json.return_value = {'test': 'data'}
+    mock_response.raise_for_status = MagicMock()
+    mock_request.return_value = mock_response
 
-        # Check that AsyncClient was called
-        mock_client.assert_called_once()
+    # Test with parameters
+    client = HttpClientFactory.create_client('https://example.com')
+    params = {'param1': 'value1', 'param2': 'value2'}
+    response = await make_request(client, 'GET', '/test', params=params)
+    assert response.status_code == 200
+    assert response.json() == {'test': 'data'}
+    mock_request.assert_called_once_with('GET', '/test', params=params)
+    await client.aclose()
+
+
+@pytest.mark.asyncio
+@patch('httpx.AsyncClient.request')
+async def test_make_request_with_json(mock_request):
+    """Test making a request with JSON data."""
+    # Setup mock
+    mock_response = MagicMock()
+    mock_response.status_code = 200
+    mock_response.json.return_value = {'test': 'data'}
+    mock_response.raise_for_status = MagicMock()
+    mock_request.return_value = mock_response
+
+    # Test with JSON data
+    client = HttpClientFactory.create_client('https://example.com')
+    json_data = {'key1': 'value1', 'key2': 'value2'}
+    response = await make_request(client, 'POST', '/test', json=json_data)
+    assert response.status_code == 200
+    assert response.json() == {'test': 'data'}
+    mock_request.assert_called_once_with('POST', '/test', json=json_data)
+    await client.aclose()
+
+
+@pytest.mark.asyncio
+async def test_make_request_with_retry():
+    """Test making a request with retry."""
+    # Create a mock client
+    mock_client = MagicMock()
+    mock_client.request = AsyncMock()
+
+    # Create a mock response
+    mock_response = MagicMock()
+    mock_response.status_code = 200
+    mock_response.json.return_value = {'test': 'data'}
+    mock_response.raise_for_status = MagicMock()
+
+    # Set up the mock to return our response
+    mock_client.request.return_value = mock_response
+
+    # Set USE_TENACITY to False for this test
+    with patch('awslabs.openapi_mcp_server.utils.http_client.USE_TENACITY', False):
+        with patch('awslabs.openapi_mcp_server.utils.http_client.TENACITY_AVAILABLE', False):
+            response = await make_request_with_retry(mock_client, 'GET', '/test')
+
+            # Verify the response
+            assert response.status_code == 200
+            assert response.json() == {'test': 'data'}
+            mock_client.request.assert_called_once()
+
+
+@pytest.mark.asyncio
+async def test_make_request_with_retry_and_error():
+    """Test making a request with retry when there's an error."""
+    # Create a mock client
+    mock_client = MagicMock()
+    mock_client.request = AsyncMock()
+
+    # Create a mock response for the successful attempt
+    mock_response = MagicMock()
+    mock_response.status_code = 200
+    mock_response.json.return_value = {'test': 'data'}
+    mock_response.raise_for_status = MagicMock()
+
+    # Set up the mock to fail first, then succeed
+    mock_client.request.side_effect = [httpx.ConnectError('Connection error'), mock_response]
+
+    # Set USE_TENACITY to False and patch asyncio.sleep to avoid actual delays
+    with patch('awslabs.openapi_mcp_server.utils.http_client.USE_TENACITY', False):
+        with patch('awslabs.openapi_mcp_server.utils.http_client.TENACITY_AVAILABLE', False):
+            with patch('asyncio.sleep', AsyncMock()) as mock_sleep:
+                response = await make_request_with_retry(mock_client, 'GET', '/test', max_retries=2)
+
+                # Verify the response
+                assert response.status_code == 200
+                assert response.json() == {'test': 'data'}
+                assert mock_client.request.call_count == 2
+                mock_sleep.assert_called_once()

@@ -8,9 +8,7 @@ from unittest.mock import MagicMock, patch
 @patch('awslabs.openapi_mcp_server.server.load_config')
 @patch('awslabs.openapi_mcp_server.server.argparse.ArgumentParser.parse_args')
 @patch('awslabs.openapi_mcp_server.server.asyncio.run')
-def test_main_function(
-    mock_asyncio_run, mock_parse_args, mock_load_config, mock_create_mcp_server
-):
+def test_main_function(mock_asyncio_run, mock_parse_args, mock_load_config, mock_create_mcp_server):
     """Test the main function."""
     # Setup mocks
     mock_args = MagicMock()
@@ -27,7 +25,7 @@ def test_main_function(
     mock_create_mcp_server.return_value = mock_server
 
     # Mock the asyncio.run result
-    mock_asyncio_run.return_value = (10, 5, 2)  # prompts, tools, resources
+    mock_asyncio_run.return_value = (10, 5, 2, 1)  # prompts, tools, resources, resource_templates
 
     # Call main
     main()

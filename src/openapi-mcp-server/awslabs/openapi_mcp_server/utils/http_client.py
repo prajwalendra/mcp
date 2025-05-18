@@ -57,10 +57,69 @@ class HttpClientFactory:
 
         Returns:
             httpx.AsyncClient: The HTTP client
+
         """
         # Use configuration values if not explicitly provided
         max_connections = max_connections if max_connections is not None else HTTP_MAX_CONNECTIONS
         max_keepalive = max_keepalive if max_keepalive is not None else HTTP_MAX_KEEPALIVE
+
+        # Log detailed auth information
+        if auth:
+            auth_type = type(auth).__name__
+            has_session_manager = hasattr(auth, 'session_manager') if auth else False
+
+            logger.debug(f'Creating HTTP client with auth type: {auth_type}')
+
+            # For CognitoAuth, verify the session manager and token
+            if has_session_manager and hasattr(auth, 'session_manager'):
+                session_manager = getattr(auth, 'session_manager')
+                is_authenticated = (
+                    session_manager.is_authenticated()
+                    if hasattr(session_manager, 'is_authenticated')
+                    else False
+                )
+                logger.debug(f'Auth has session_manager, authenticated: {is_authenticated}')
+
+                # Try to get and log the token
+                if hasattr(session_manager, 'get_access_token'):
+                    token = session_manager.get_access_token()
+                    has_token = token is not None
+                    logger.debug(f'Session manager has access token: {has_token}')
+
+                    if token:
+                        # Mask token for security
+                        masked_token = (
+                            token[:10] + '...' + token[-10:] if len(token) > 30 else token
+                        )
+                        logger.debug(f'Access token from session manager: {masked_token}')
+
+                        # Add token to default headers if not already there
+                        if headers is None:
+                            headers = {}
+
+                        # Only add if not already in headers
+                        if 'Authorization' not in headers:
+                            headers['Authorization'] = f'Bearer {token}'
+                            logger.debug('Added Authorization header from session token')
+
+        # Log the final headers that will be used (safely)
+        if headers:
+            safe_headers = {}
+            for key, value in headers.items():
+                if key.lower() == 'authorization' and value:
+                    if isinstance(value, str) and value.startswith('Bearer '):
+                        token_part = value[7:]
+                        masked_token = (
+                            token_part[:10] + '...' + token_part[-10:]
+                            if len(token_part) > 30
+                            else token_part
+                        )
+                        safe_headers[key] = f'Bearer {masked_token}'
+                    else:
+                        safe_headers[key] = '[MASKED]'
+                else:
+                    safe_headers[key] = value
+            logger.debug(f'Creating client with headers: {safe_headers}')
 
         # Create client with connection pooling
         client = httpx.AsyncClient(
@@ -80,6 +139,12 @@ class HttpClientFactory:
             f'Created HTTP client for {base_url} with max_connections={max_connections}, '
             f'max_keepalive={max_keepalive}'
         )
+
+        # Verify client has auth after creation
+        client_has_auth = hasattr(client, 'auth') and client.auth is not None
+        logger.debug(f'Created client has auth: {client_has_auth}')
+        if client_has_auth:
+            logger.debug(f'Client auth type: {type(client.auth).__name__}')
 
         return client
 
@@ -107,6 +172,7 @@ async def make_request_with_retry(
 
     Raises:
         httpx.HTTPError: If the request fails after all retries
+
     """
     # Use tenacity if available and enabled
     if USE_TENACITY and TENACITY_AVAILABLE and tenacity is not None:
@@ -177,6 +243,7 @@ async def make_request(
 
     Raises:
         httpx.HTTPError: If the request fails
+
     """
     response = await client.request(method, url, **kwargs)
     response.raise_for_status()

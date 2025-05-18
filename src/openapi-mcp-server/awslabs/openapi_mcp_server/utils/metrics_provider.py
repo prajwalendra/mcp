@@ -92,6 +92,7 @@ class InMemoryMetricsProvider(MetricsProvider):
 
         Args:
             max_history: Maximum number of API calls to keep in history (defaults to config value)
+
         """
         self._api_calls: List[ApiCallMetrics] = []
         self._tool_usage: List[ToolMetrics] = []
@@ -249,6 +250,8 @@ class InMemoryMetricsProvider(MetricsProvider):
 
 
 # Try to import prometheus_client if enabled
+# Note: Tests for PrometheusMetricsProvider will be skipped if prometheus_client
+# is not installed. This is expected behavior and not a test failure.
 PROMETHEUS_AVAILABLE = False
 prometheus_client = None
 if USE_PROMETHEUS:
@@ -441,7 +444,7 @@ metrics = create_metrics_provider()
 
 
 def api_call_timer(func):
-    """Decorator to time API calls and record metrics."""
+    """Time API calls and record metrics."""
 
     async def wrapper(*args, **kwargs):
         start_time = time.time()
@@ -466,7 +469,7 @@ def api_call_timer(func):
 
 
 def tool_usage_timer(func):
-    """Decorator to time tool usage and record metrics."""
+    """Time tool usage and record metrics."""
 
     async def wrapper(*args, **kwargs):
         start_time = time.time()

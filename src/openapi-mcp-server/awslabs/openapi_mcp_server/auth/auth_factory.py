@@ -1,12 +1,10 @@
 """Authentication provider factory."""
 
-from functools import lru_cache
-from typing import Any, Callable, Dict, Type
-
 from awslabs.openapi_mcp_server import logger
 from awslabs.openapi_mcp_server.api.config import Config
-from awslabs.openapi_mcp_server.auth.auth_provider import AuthProvider, NullAuthProvider
-from awslabs.openapi_mcp_server.auth.auth_protocol import AuthProviderFactory, AuthProviderProtocol
+from awslabs.openapi_mcp_server.auth.auth_protocol import AuthProviderProtocol
+from awslabs.openapi_mcp_server.auth.auth_provider import NullAuthProvider
+from typing import Any, Dict, Type
 
 
 # Registry of authentication providers
@@ -25,6 +23,7 @@ def register_auth_provider(auth_type: str, provider_class: Type[Any]) -> None:
 
     Raises:
         ValueError: If auth_type is already registered
+
     """
     auth_type = auth_type.lower()
     if auth_type in _AUTH_PROVIDERS:
@@ -36,30 +35,33 @@ def register_auth_provider(auth_type: str, provider_class: Type[Any]) -> None:
     )
 
 
-def _get_provider_instance(auth_type: str, config_hash: int, config: Config) -> AuthProviderProtocol:
+def _get_provider_instance(
+    auth_type: str, config_hash: int, config: Config
+) -> AuthProviderProtocol:
     """Get a cached provider instance or create a new one.
-    
+
     Args:
         auth_type: The authentication type
         config_hash: Hash of the configuration to differentiate instances
         config: The configuration object
-        
+
     Returns:
         AuthProviderProtocol: The authentication provider instance
+
     """
     # Check if we have a cached instance
     if config_hash in _PROVIDER_CACHE:
-        logger.debug(f"Using cached authentication provider for {auth_type}")
+        logger.debug(f'Using cached authentication provider for {auth_type}')
         return _PROVIDER_CACHE[config_hash]
-    
+
     # Create a new instance
     provider_class = _AUTH_PROVIDERS[auth_type]
     provider = provider_class(config)
-    
+
     # Cache the instance
     _PROVIDER_CACHE[config_hash] = provider
-    
-    logger.debug(f"Created new authentication provider: {provider.provider_name}")
+
+    logger.debug(f'Created new authentication provider: {provider.provider_name}')
     return provider
 
 
@@ -75,27 +77,30 @@ def get_auth_provider(config: Config) -> AuthProviderProtocol:
     Notes:
         If the specified auth_type is not registered, falls back to NullAuthProvider
         Uses caching to avoid creating duplicate provider instances
+
     """
     auth_type = config.auth_type.lower()
 
     if auth_type not in _AUTH_PROVIDERS:
         logger.warning(f"Unknown authentication type '{auth_type}'. Falling back to 'none'.")
         auth_type = 'none'
-    
+
     # Create a hash of the relevant config parts for caching
-    config_hash = hash((
-        auth_type,
-        getattr(config, 'auth_token', None),
-        getattr(config, 'auth_username', None),
-        getattr(config, 'auth_password', None),
-        getattr(config, 'auth_api_key', None),
-        getattr(config, 'auth_api_key_name', None),
-        getattr(config, 'auth_api_key_in', None),
-    ))
-    
+    config_hash = hash(
+        (
+            auth_type,
+            getattr(config, 'auth_token', None),
+            getattr(config, 'auth_username', None),
+            getattr(config, 'auth_password', None),
+            getattr(config, 'auth_api_key', None),
+            getattr(config, 'auth_api_key_name', None),
+            getattr(config, 'auth_api_key_in', None),
+        )
+    )
+
     # Get or create provider instance
     provider = _get_provider_instance(auth_type, config_hash, config)
-    
+
     logger.info(f'Created authentication provider: {provider.provider_name}')
 
     if not provider.is_configured() and auth_type != 'none':
@@ -114,14 +119,15 @@ def is_auth_type_available(auth_type: str) -> bool:
 
     Returns:
         bool: True if available, False otherwise
+
     """
     return auth_type.lower() in _AUTH_PROVIDERS
 
 
 def clear_provider_cache() -> None:
     """Clear the provider instance cache.
-    
+
     This is useful for testing or when configuration changes.
     """
     _PROVIDER_CACHE.clear()
-    logger.debug("Authentication provider cache cleared")
+    logger.debug('Authentication provider cache cleared')

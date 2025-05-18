@@ -1,11 +1,10 @@
 """Tests for Bearer authentication provider."""
 
 import pytest
-from unittest.mock import patch, MagicMock
-
 from awslabs.openapi_mcp_server.api.config import Config
-from awslabs.openapi_mcp_server.auth.bearer_auth import BearerAuthProvider
 from awslabs.openapi_mcp_server.auth.auth_errors import MissingCredentialsError
+from awslabs.openapi_mcp_server.auth.bearer_auth import BearerAuthProvider
+from unittest.mock import patch
 
 
 class TestBearerAuthProvider:
@@ -46,7 +45,7 @@ class TestBearerAuthProvider:
             BearerAuthProvider(config)
 
         # Check the error message
-        assert "Bearer authentication requires a valid token" in str(excinfo.value)
+        assert 'Bearer authentication requires a valid token' in str(excinfo.value)
 
     def test_custom_token_ttl(self):
         """Test custom token TTL."""
@@ -86,8 +85,11 @@ class TestBearerAuthProvider:
             # Check that logger.error was called twice
             assert mock_logger.error.call_count == 2
             # Check that the error messages contain the expected text
-            assert "Bearer authentication requires a valid token" in mock_logger.error.call_args_list[0][0][0]
-            assert "Please provide a token" in mock_logger.error.call_args_list[1][0][0]
+            assert (
+                'Bearer authentication requires a valid token'
+                in mock_logger.error.call_args_list[0][0][0]
+            )
+            assert 'Please provide a token' in mock_logger.error.call_args_list[1][0][0]
 
     def test_generate_auth_headers(self):
         """Test generation of auth headers."""

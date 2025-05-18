@@ -1,104 +1,144 @@
 """Tests for the base module."""
 
 import pytest
-from unittest.mock import patch
 from awslabs.openapi_mcp_server.prompts.base import (
-    format_markdown_table,
     format_code_block,
+    format_markdown_table,
     format_parameter_description,
 )
+from unittest.mock import patch
+
+
+# Mock the Prompt class since it might be imported from different places
+class MockPrompt:
+    """Mock Prompt class for testing."""
+
+    def __init__(
+        self,
+        name: str,
+        content: str,
+        description: str = None,
+        metadata: dict = None,
+    ):
+        """Initialize a MockPrompt."""
+        self.name = name
+        self.content = content
+        self.description = description or ''
+        self.metadata = metadata or {}
+        self.fn = lambda: content
+
+
+@pytest.fixture
+def mock_prompt():
+    """Patch the Prompt class with our MockPrompt."""
+    with patch('awslabs.openapi_mcp_server.prompts.base.Prompt', MockPrompt):
+        yield
+
+
+def test_prompt_initialization(mock_prompt):
+    """Test initializing a Prompt object."""
+    # Import Prompt after patching
+    from awslabs.openapi_mcp_server.prompts.base import Prompt
+
+    # Test with minimal parameters
+    prompt = Prompt(name='test_prompt', content='This is a test prompt')
+    assert prompt.name == 'test_prompt'
+    assert prompt.content == 'This is a test prompt'
+    assert prompt.description == ''
+    assert prompt.metadata == {}
+    assert prompt.fn() == 'This is a test prompt'
+
+    # Test with all parameters
+    metadata = {'key': 'value'}
+    prompt = Prompt(
+        name='test_prompt',
+        content='This is a test prompt',
+        description='A test prompt description',
+        metadata=metadata,
+    )
+    assert prompt.name == 'test_prompt'
+    assert prompt.content == 'This is a test prompt'
+    assert prompt.description == 'A test prompt description'
+    assert prompt.metadata == metadata
+    assert prompt.fn() == 'This is a test prompt'
 
 
 def test_format_markdown_table():
     """Test formatting a markdown table."""
-    # Setup test data
-    headers = ["Name", "Type", "Description"]
+    # Test with simple data
+    headers = ['Name', 'Type', 'Description']
     rows = [
-        ["id", "string", "The ID of the item"],
-        ["name", "string", "The name of the item"],
-        ["price", "number", "The price of the item"]
+        ['param1', 'string', 'First parameter'],
+        ['param2', 'integer', 'Second parameter'],
+        ['param3', 'boolean', 'Third parameter'],
     ]
-    
-    # Call the function
-    result = format_markdown_table(headers, rows)
-    
-    # Verify the result
+
     expected = (
-        "| Name | Type | Description |\n"
-        "| --- | --- | --- |\n"
-        "| id | string | The ID of the item |\n"
-        "| name | string | The name of the item |\n"
-        "| price | number | The price of the item |\n"
+        '| Name | Type | Description |\n'
+        '| --- | --- | --- |\n'
+        '| param1 | string | First parameter |\n'
+        '| param2 | integer | Second parameter |\n'
+        '| param3 | boolean | Third parameter |\n'
     )
+
+    result = format_markdown_table(headers, rows)
     assert result == expected
 
-
-def test_format_markdown_table_empty():
-    """Test formatting an empty markdown table."""
-    # Setup test data
-    headers = ["Name", "Type", "Description"]
-    rows = []
-    
-    # Call the function
-    result = format_markdown_table(headers, rows)
-    
-    # Verify the result
-    assert result == ""
+    # Test with empty rows
+    result = format_markdown_table(headers, [])
+    assert result == ''
 
 
 def test_format_code_block():
     """Test formatting a code block."""
-    # Setup test data
-    code = "print('Hello, world!')"
-    
-    # Call the function with default language
+    # Test with default language
+    code = "def test_function():\n    return 'test'"
+    expected = "```python\ndef test_function():\n    return 'test'\n```"
+
     result = format_code_block(code)
-    
-    # Verify the result
-    expected = "```python\nprint('Hello, world!')\n```"
     assert result == expected
-    
-    # Call the function with custom language
-    result = format_code_block(code, language="javascript")
-    
-    # Verify the result
-    expected = "```javascript\nprint('Hello, world!')\n```"
+
+    # Test with specified language
+    result = format_code_block(code, language='javascript')
+    expected = "```javascript\ndef test_function():\n    return 'test'\n```"
     assert result == expected
 
 
 def test_format_parameter_description():
     """Test formatting a parameter description."""
-    # Setup test data - required parameter with schema
+    # Test required parameter with description
     param = {
-        "name": "itemId",
-        "in": "path",
-        "required": True,
-        "description": "The ID of the item",
-        "schema": {
-            "type": "string"
-        }
+        'name': 'test_param',
+        'description': 'A test parameter',
+        'required': True,
+        'schema': {'type': 'string'},
     }
-    
-    # Call the function
+
+    expected = '**test_param** (required): string - A test parameter'
     result = format_parameter_description(param)
-    
-    # Verify the result
-    assert result == "**itemId** (required): string - The ID of the item"
-    
-    # Test with optional parameter
-    param["required"] = False
+    assert result == expected
+
+    # Test optional parameter with description
+    param['required'] = False
+    expected = '**test_param** (optional): string - A test parameter'
     result = format_parameter_description(param)
-    assert result == "**itemId** (optional): string - The ID of the item"
-    
-    # Test with enum values
-    param["schema"]["enum"] = ["id1", "id2", "id3"]
+    assert result == expected
+
+    # Test parameter with enum values
+    param['schema']['enum'] = ['value1', 'value2', 'value3']
+    expected = '**test_param** (optional): string - A test parameter\n  Allowed values: `value1`, `value2`, `value3`'
     result = format_parameter_description(param)
-    assert "**itemId** (optional): string - The ID of the item" in result
-    assert "Allowed values: `id1`, `id2`, `id3`" in result
-    
-    # Test with default value
-    param["schema"]["default"] = "id1"
+    assert result == expected
+
+    # Test parameter with default value
+    param['schema']['default'] = 'value1'
+    expected = '**test_param** (optional): string - A test parameter\n  Allowed values: `value1`, `value2`, `value3`\n  Default: `value1`'
     result = format_parameter_description(param)
-    assert "**itemId** (optional): string - The ID of the item" in result
-    assert "Allowed values: `id1`, `id2`, `id3`" in result
-    assert "Default: `id1`" in result
+    assert result == expected
+
+    # Test parameter without description
+    param = {'name': 'test_param', 'required': True, 'schema': {'type': 'integer'}}
+
+    expected = '**test_param** (required): integer'
+    result = format_parameter_description(param)
+    assert result == expected

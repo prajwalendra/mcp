@@ -62,6 +62,7 @@ class InMemoryCacheProvider(CacheProvider[T]):
 
         Args:
             ttl_seconds: Time-to-live in seconds for cache entries (defaults to config value)
+
         """
         self._cache: Dict[str, tuple[T, float]] = {}
         self._ttl_seconds = ttl_seconds if ttl_seconds is not None else CACHE_TTL
@@ -107,6 +108,7 @@ class InMemoryCacheProvider(CacheProvider[T]):
 
         Returns:
             int: Number of entries removed
+
         """
         now = time.time()
         expired_keys = [key for key, (_, expiry) in self._cache.items() if now > expiry]
@@ -129,6 +131,7 @@ class CachetoolsProvider(CacheProvider[T]):
         Args:
             ttl_seconds: Time-to-live in seconds for cache entries (defaults to config value)
             maxsize: Maximum number of entries in the cache (defaults to config value)
+
         """
         if not CACHETOOLS_AVAILABLE or cachetools is None:
             raise ImportError('cachetools not available')
@@ -182,6 +185,7 @@ def create_cache_provider(ttl_seconds: Optional[int] = None) -> CacheProvider:
 
     Returns:
         CacheProvider: The cache provider
+
     """
     # Use configuration value if not explicitly provided
     ttl_seconds = ttl_seconds if ttl_seconds is not None else CACHE_TTL
@@ -198,13 +202,14 @@ def create_cache_provider(ttl_seconds: Optional[int] = None) -> CacheProvider:
 
 
 def cached(ttl_seconds: Optional[int] = None) -> Callable:
-    """Decorator to cache function results.
+    """Cache function results.
 
     Args:
         ttl_seconds: Time-to-live in seconds for cache entries (defaults to config value)
 
     Returns:
         Callable: Decorated function with caching
+
     """
     cache = create_cache_provider(ttl_seconds=ttl_seconds)
 

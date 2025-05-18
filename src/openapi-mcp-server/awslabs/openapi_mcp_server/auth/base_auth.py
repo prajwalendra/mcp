@@ -3,18 +3,15 @@
 import functools
 import httpx
 from abc import ABC, abstractmethod
-from typing import Any, Callable, Dict, Optional, TypeVar, cast
-
 from awslabs.openapi_mcp_server import logger
 from awslabs.openapi_mcp_server.api.config import Config
 from awslabs.openapi_mcp_server.auth.auth_errors import (
     AuthError,
-    AuthErrorType,
     ConfigurationError,
     format_error_message,
 )
 from awslabs.openapi_mcp_server.auth.auth_provider import AuthProvider
-from awslabs.openapi_mcp_server.auth.auth_protocol import AuthProviderProtocol
+from typing import Any, Callable, Dict, Optional, TypeVar, cast
 
 
 # Type variable for method return types
@@ -33,6 +30,7 @@ class BaseAuthProvider(AuthProvider, ABC):
 
         Args:
             config: Application configuration
+
         """
         self._config = config
         self._is_valid = False
@@ -40,7 +38,7 @@ class BaseAuthProvider(AuthProvider, ABC):
         self._auth_params: Dict[str, str] = {}
         self._auth_cookies: Dict[str, str] = {}
         self._validation_error: Optional[AuthError] = None
-        
+
         # Template method pattern: validate and initialize
         try:
             self._is_valid = self._validate_config()
@@ -56,7 +54,7 @@ class BaseAuthProvider(AuthProvider, ABC):
             raise e
         except Exception as e:
             self._validation_error = ConfigurationError(
-                f"Unexpected error during authentication provider initialization: {str(e)}"
+                f'Unexpected error during authentication provider initialization: {str(e)}'
             )
             self._is_valid = False
             self._log_auth_error(self._validation_error)
@@ -65,7 +63,7 @@ class BaseAuthProvider(AuthProvider, ABC):
 
     def _initialize_auth(self) -> None:
         """Initialize authentication data after validation.
-        
+
         This method is called after successful validation to set up
         headers, params, and cookies. Override in subclasses if needed.
         """
@@ -77,51 +75,52 @@ class BaseAuthProvider(AuthProvider, ABC):
 
         Returns:
             bool: True if configuration is valid, False otherwise
-        
+
         Raises:
             AuthError: If validation fails with a specific error
+
         """
         pass
 
     def _handle_validation_error(self) -> None:
         """Handle validation error.
-        
+
         This method is called when validation fails but no exception is raised.
         It should create and log an appropriate error. Override in subclasses.
         """
         self._validation_error = ConfigurationError(
-            f"Invalid configuration for {self.provider_name} authentication provider"
+            f'Invalid configuration for {self.provider_name} authentication provider'
         )
         self._log_auth_error(self._validation_error)
-    
+
     def _log_auth_error(self, error: AuthError) -> None:
         """Log an authentication error.
-        
+
         Args:
             error: The authentication error
+
         """
-        message = format_error_message(
-            self.provider_name, error.error_type, error.message
-        )
+        message = format_error_message(self.provider_name, error.error_type, error.message)
         logger.error(message)
-        
+
         # Log additional details at debug level
         if error.details:
-            logger.debug(f"Error details: {error.details}")
-    
+            logger.debug(f'Error details: {error.details}')
+
     def _log_validation_error(self) -> None:
         """Log validation error messages.
-        
+
         This method is kept for backward compatibility.
         New implementations should use _handle_validation_error instead.
         """
         self._handle_validation_error()
-    
+
     def _requires_valid_config(method: Callable[..., T]) -> Callable[..., T]:  # type: ignore
-        """Decorator to ensure a method is only called with valid configuration.
-        
+        """Ensure a method is only called with valid configuration.
+
         If the configuration is not valid, returns an empty result.
         """
+
         @functools.wraps(method)
         def wrapper(self: 'BaseAuthProvider', *args: Any, **kwargs: Any) -> T:
             if not self._is_valid:
@@ -133,6 +132,7 @@ class BaseAuthProvider(AuthProvider, ABC):
                     return cast(T, None)
                 return cast(T, None)
             return method(self, *args, **kwargs)
+
         return wrapper
 
     @_requires_valid_config
@@ -141,6 +141,7 @@ class BaseAuthProvider(AuthProvider, ABC):
 
         Returns:
             Dict[str, str]: Authentication headers
+
         """
         return self._auth_headers
 
@@ -150,6 +151,7 @@ class BaseAuthProvider(AuthProvider, ABC):
 
         Returns:
             Dict[str, str]: Authentication query parameters
+
         """
         return self._auth_params
 
@@ -159,6 +161,7 @@ class BaseAuthProvider(AuthProvider, ABC):
 
         Returns:
             Dict[str, str]: Authentication cookies
+
         """
         return self._auth_cookies
 
@@ -168,6 +171,7 @@ class BaseAuthProvider(AuthProvider, ABC):
 
         Returns:
             Optional[httpx.Auth]: Authentication object for HTTPX client
+
         """
         return None
 
@@ -176,14 +180,16 @@ class BaseAuthProvider(AuthProvider, ABC):
 
         Returns:
             bool: True if properly configured, False otherwise
+
         """
         return self._is_valid
 
     def get_validation_error(self) -> Optional[AuthError]:
         """Get the validation error if configuration is invalid.
-        
+
         Returns:
             Optional[AuthError]: The validation error or None if configuration is valid
+
         """
         return self._validation_error
 
@@ -194,5 +200,6 @@ class BaseAuthProvider(AuthProvider, ABC):
 
         Returns:
             str: Name of the authentication provider
+
         """
         pass

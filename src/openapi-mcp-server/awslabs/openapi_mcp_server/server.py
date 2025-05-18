@@ -24,6 +24,7 @@ def create_mcp_server(config: Config) -> FastMCP:
 
     Returns:
         FastMCP: The configured FastMCP server
+
     """
     logger.info('Creating FastMCP server')
 
@@ -58,75 +59,123 @@ def create_mcp_server(config: Config) -> FastMCP:
             logger.error('No API base URL provided')
             raise ValueError('API base URL must be provided')
 
-        # Configure authentication
-        headers = {}
-        auth = None
-        cookies = None
-        query_params = {}
+        # Configure authentication using the auth factory
+        from awslabs.openapi_mcp_server.auth import get_auth_provider, is_auth_type_available
 
-        if config.auth_type == 'basic':
-            if not config.auth_username or not config.auth_password:
-                logger.warning('Basic authentication enabled but username or password is missing')
-            else:
-                import httpx
+        # Import and register the specific auth provider
+        from awslabs.openapi_mcp_server.auth.register import register_provider_by_type
 
-                auth = httpx.BasicAuth(
-                    username=config.auth_username,
-                    password=config.auth_password,
+        # Register only the provider we need
+        if config.auth_type and config.auth_type != 'none':
+            logger.debug(f'Registering authentication provider for type: {config.auth_type}')
+            register_provider_by_type(config.auth_type)
+        else:
+            logger.debug('No authentication type specified, using none')
+
+        # Check if the requested auth type is available
+        if config.auth_type != 'none' and not is_auth_type_available(config.auth_type):
+            logger.warning(
+                f'Authentication type {config.auth_type} is not available. Falling back to none.'
+            )
+            config.auth_type = 'none'
+
+        # Get the auth provider
+        auth_provider = get_auth_provider(config)
+
+        # Get authentication components
+        auth_headers = auth_provider.get_auth_headers()
+        # Get auth params (not used directly but may be needed in the future)
+        _ = auth_provider.get_auth_params()
+        auth_cookies = auth_provider.get_auth_cookies()
+        httpx_auth = auth_provider.get_httpx_auth()
+
+        # Helper function to handle authentication configuration errors
+        def handle_auth_error(auth_type, error_message):
+            """Handle authentication configuration errors.
+
+            Args:
+                auth_type: The authentication type
+                error_message: The error message to log
+
+            """
+            logger.error(
+                f'Authentication provider {auth_provider.provider_name} is not properly configured'
+            )
+            logger.error(error_message)
+            logger.error('Server shutting down due to authentication configuration error.')
+            sys.exit(1)
+
+        # Check if the provider is properly configured
+        if not auth_provider.is_configured() and config.auth_type != 'none':
+            if config.auth_type == 'bearer':
+                handle_auth_error(
+                    'bearer',
+                    'Bearer authentication requires a valid token. Please provide a token using --auth-token command line argument or AUTH_TOKEN environment variable.',
                 )
-                logger.info(f'Using Basic authentication for user: {config.auth_username}')
-
-        elif config.auth_type == 'bearer':
-            if not config.auth_token:
-                logger.warning('Bearer authentication enabled but token is missing')
+            elif config.auth_type == 'basic':
+                handle_auth_error(
+                    'basic',
+                    'Basic authentication requires both username and password. Please provide them using --auth-username and --auth-password command line arguments or AUTH_USERNAME and AUTH_PASSWORD environment variables.',
+                )
+            elif config.auth_type == 'api_key':
+                handle_auth_error(
+                    'api_key',
+                    'API Key authentication requires a valid API key. Please provide it using --auth-api-key command line argument or AUTH_API_KEY environment variable.',
+                )
+            elif config.auth_type == 'cognito':
+                handle_auth_error(
+                    'cognito',
+                    'Cognito authentication requires client ID, username, and password. Please provide them using --auth-cognito-client-id, --auth-cognito-username, and --auth-cognito-password command line arguments or corresponding environment variables.',
+                )
             else:
-                headers['Authorization'] = f'Bearer {config.auth_token}'
-                logger.info('Using Bearer token authentication')
+                logger.warning(
+                    'Continuing with incomplete authentication configuration. This may cause API requests to fail.'
+                )
 
-        elif config.auth_type == 'api_key':
-            if not config.auth_api_key:
-                logger.warning('API key authentication enabled but API key is missing')
-            else:
-                if config.auth_api_key_in == 'header':
-                    headers[config.auth_api_key_name] = config.auth_api_key
-                    logger.info(
-                        f'Using API key authentication in header: {config.auth_api_key_name}'
-                    )
-                elif config.auth_api_key_in == 'query':
-                    query_params[config.auth_api_key_name] = config.auth_api_key
-                    logger.info(
-                        f'Using API key authentication in query parameter: {config.auth_api_key_name}'
-                    )
-                elif config.auth_api_key_in == 'cookie':
-                    cookies = {config.auth_api_key_name: config.auth_api_key}
-                    logger.info(
-                        f'Using API key authentication in cookie: {config.auth_api_key_name}'
-                    )
-                else:
-                    logger.warning(f'Unsupported API key location: {config.auth_api_key_in}')
+        # Log authentication info
+        if config.auth_type != 'none':
+            logger.info(f'Using {auth_provider.provider_name} authentication')
 
         # Create the HTTP client with authentication and connection pooling
         client = HttpClientFactory.create_client(
             base_url=config.api_base_url,
-            headers=headers,
-            auth=auth,
-            cookies=cookies,
+            headers=auth_headers,
+            auth=httpx_auth,
+            cookies=auth_cookies,
         )
         logger.info(f'Created HTTP client for API base URL: {config.api_base_url}')
 
-        # Create a FastMCP server from the OpenAPI specification
-        server = FastMCP.from_openapi(openapi_spec=openapi_spec, client=client)
-        logger.info(f'Successfully configured {config.api_name} API')
+        # Apply patches to improve functionality
+        logger.info('Applying route mapping patch to handle query parameters')
+        import fastmcp.server.openapi
+        from awslabs.openapi_mcp_server.route_patch import apply_route_patch
 
-        # Generate operation-specific prompts
+        # Apply the route mapping patch with debug logging enabled
+        apply_route_patch(fastmcp.server.openapi, enable=True, debug=True)
+
+        # OpenAPI tool patch has been removed
+        logger.info('OpenAPI tool patch has been removed')
+
+        # Create a FastMCP server from the OpenAPI specification
+        logger.info('Creating FastMCP server with patched route mapping')
+        server = FastMCP.from_openapi(openapi_spec=openapi_spec, client=client)
+        logger.info(f'Successfully configured API: {config.api_name}')
+
+        # Update API name from OpenAPI spec title if available
+        if openapi_spec and isinstance(openapi_spec, dict) and 'info' in openapi_spec:
+            if 'title' in openapi_spec['info'] and openapi_spec['info']['title']:
+                config.api_name = openapi_spec['info']['title']
+                logger.info(f'Updated API name from OpenAPI spec title: {config.api_name}')
+
+        # Generate unified prompts (API overview, operation-specific, and mapping reference)
         try:
-            from awslabs.openapi_mcp_server.prompts.operation_instructions import (
-                generate_operation_prompts,
+            from awslabs.openapi_mcp_server.prompts.prompt_orchestrator import (
+                generate_unified_prompts,
             )
 
-            logger.info(f'Generating prompts for API: {config.api_name}')
+            logger.info(f'Generating unified prompts for API: {config.api_name}')
             # Run the async function
-            asyncio.run(generate_operation_prompts(server, config.api_name, openapi_spec))  # type: ignore
+            asyncio.run(generate_unified_prompts(server, config.api_name, openapi_spec))  # type: ignore
 
             # Log the number of prompts after generation
             prompt_count = (
@@ -152,6 +201,7 @@ def create_mcp_server(config: Config) -> FastMCP:
 
             Returns:
                 Dict[str, Any]: Health check results
+
             """
             api_health = True
             api_message = 'API is reachable'
@@ -190,6 +240,11 @@ def create_mcp_server(config: Config) -> FastMCP:
 
     except Exception as e:
         logger.error(f'Error setting up API: {e}')
+        logger.error('Server shutting down due to API setup error.')
+        import traceback
+
+        logger.error(f'Traceback: {traceback.format_exc()}')
+        sys.exit(1)
 
     # Move the logging here, after the server is fully initialized
     # Get the actual tools from the server's internal structure
@@ -230,16 +285,40 @@ def create_mcp_server(config: Config) -> FastMCP:
 
 def setup_signal_handlers():
     """Set up signal handlers for graceful shutdown."""
+    # Store original SIGINT handler
+    original_sigint = signal.getsignal(signal.SIGINT)
 
     def signal_handler(sig, frame):
-        logger.info(f'Received signal {sig}, shutting down...')
+        """Handle signals by logging metrics then chain to original handler."""
+        logger.debug(f'Received signal {sig}, shutting down gracefully...')
+
         # Log final metrics
         summary = metrics.get_summary()
         logger.info(f'Final metrics: {summary}')
-        sys.exit(0)
 
-    signal.signal(signal.SIGINT, signal_handler)
+        # if sig is signal.SIGINT handle gracefully
+        if sig == signal.SIGINT:
+            logger.info('Process Interrupted, Shutting down gracefully...')
+            sys.exit(0)
+
+        # For SIGINT, chain to the original handler
+        if (
+            sig == signal.SIGINT
+            and original_sigint != signal.SIG_DFL
+            and original_sigint != signal.SIG_IGN
+        ):
+            # Call the original handler
+            if callable(original_sigint):
+                original_sigint(sig, frame)
+
+        # For other signals or if no original handler, just return
+        # This lets the default handling take over
+
+    # Register for SIGTERM only
     signal.signal(signal.SIGTERM, signal_handler)
+
+    # For SIGINT, we'll use a special handler that logs then chains to original
+    signal.signal(signal.SIGINT, signal_handler)
 
 
 def main():
@@ -267,12 +346,18 @@ def main():
     # Authentication configuration
     parser.add_argument(
         '--auth-type',
-        choices=['none', 'basic', 'bearer', 'api_key'],
+        choices=['none', 'basic', 'bearer', 'api_key', 'cognito'],
         help='Authentication type to use (default: none)',
     )
+
+    # Basic auth
     parser.add_argument('--auth-username', help='Username for basic authentication')
     parser.add_argument('--auth-password', help='Password for basic authentication')
+
+    # Bearer auth
     parser.add_argument('--auth-token', help='Token for bearer authentication')
+
+    # API key auth
     parser.add_argument('--auth-api-key', help='API key for API key authentication')
     parser.add_argument('--auth-api-key-name', help='Name of the API key (default: api_key)')
     parser.add_argument(
@@ -281,15 +366,21 @@ def main():
         help='Where to place the API key (default: header)',
     )
 
+    # Cognito auth
+    parser.add_argument('--auth-cognito-client-id', help='Client ID for Cognito authentication')
+    parser.add_argument('--auth-cognito-username', help='Username for Cognito authentication')
+    parser.add_argument('--auth-cognito-password', help='Password for Cognito authentication')
+    parser.add_argument(
+        '--auth-cognito-user-pool-id', help='User Pool ID for Cognito authentication'
+    )
+    parser.add_argument('--auth-cognito-region', help='AWS region for Cognito (default: us-east-1)')
+
     args = parser.parse_args()
 
     # Set up logging with loguru at specified level
     logger.remove()
     logger.add(lambda msg: print(msg, end=''), level=args.log_level)
     logger.info(f'Starting server with logging level: {args.log_level}')
-
-    # Set up signal handlers
-    setup_signal_handlers()
 
     # Load configuration
     logger.debug('Loading configuration from arguments and environment')
@@ -300,22 +391,69 @@ def main():
     logger.info('Creating MCP server')
     mcp_server = create_mcp_server(config)
 
-    # log number of prompts, tools and resources
-    async def get_counts(server):
-        prompts = await server.get_prompts()
-        tools = await server.get_tools()
-        resources = await server.get_resources()
-        return len(prompts), len(tools), len(resources)
+    # Set up signal handlers
+    setup_signal_handlers()
 
-    prompt_count, tool_count, resource_count = asyncio.run(get_counts(mcp_server))
-    logger.info(f'Number of prompts: {prompt_count}')
-    logger.info(f'Number of tools: {tool_count}')
-    logger.info(f'Number of resources: {resource_count}')
+    try:
+        # Get counts of prompts, tools, resources, and resource templates
+        async def get_all_counts(server):
+            prompts = await server.get_prompts()
+            tools = await server.get_tools()
+            resources = await server.get_resources()
+
+            # Get resource templates if available
+            resource_templates = []
+            if hasattr(server, 'get_resource_templates'):
+                try:
+                    resource_templates = await server.get_resource_templates()
+                except Exception:
+                    # If get_resource_templates is not implemented, ignore the error
+                    pass
+
+            return len(prompts), len(tools), len(resources), len(resource_templates)
+
+        prompt_count, tool_count, resource_count, resource_template_count = asyncio.run(
+            get_all_counts(mcp_server)
+        )
+
+        # Log all counts in a single statement
+        logger.info(
+            f'Server components: {prompt_count} prompts, {tool_count} tools, {resource_count} resources, {resource_template_count} resource templates'
+        )
+
+        # Check if we have at least one tool or resource
+        if tool_count == 0 and resource_count == 0:
+            logger.warning(
+                'No tools or resources were registered. This might indicate an issue with the API specification or authentication.'
+            )
+    except Exception as e:
+        logger.error(f'Error counting tools and resources: {e}')
+        logger.error('Server shutting down due to error in tool/resource registration.')
+        import traceback
+
+        logger.error(f'Traceback: {traceback.format_exc()}')
+        sys.exit(1)
 
     # Run server with appropriate transport
     if config.transport == 'sse':
         logger.info(f'Running server with SSE transport on port {config.port}')
         mcp_server.settings.port = config.port
+
+        # Configure uvicorn settings for graceful shutdown
+        if hasattr(mcp_server, 'settings'):
+            # Set uvicorn options using setattr to avoid type checking issues
+            if not hasattr(mcp_server.settings, 'uvicorn_options'):
+                setattr(mcp_server.settings, 'uvicorn_options', {})
+
+            # Get the uvicorn options
+            uvicorn_options = getattr(mcp_server.settings, 'uvicorn_options')
+
+            # Set a longer graceful shutdown timeout (default is 10.0 seconds)
+            uvicorn_options['timeout_graceful_shutdown'] = 5.0
+            # Enable graceful shutdown
+            uvicorn_options['graceful_shutdown'] = True
+            logger.info('Configured uvicorn for graceful shutdown')
+
         mcp_server.run(transport='sse')
     else:
         logger.info('Running server with stdio transport')

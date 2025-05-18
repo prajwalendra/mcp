@@ -5,18 +5,24 @@ OpenAPI MCP Server - A server that dynamically creates MCP tools and resources f
 __version__ = '0.1.0'
 
 
-import sys
 import inspect
+import sys
+
 from loguru import logger
 
 # Remove default loguru handler
 logger.remove()
 
+
+def get_format():
+    return '<green>{time:YYYY-MM-DD HH:mm:ss.SSS}</green> | <level>{level}</level> | <cyan>{name}</cyan>:<cyan>{function}</cyan>:<cyan>{line}</cyan> - <level>{message}</level>'
+
+
 # Set up enhanced logging format to include function name, line number, and logger name
 # Fixed the whitespace issue after log level by removing padding
 logger.add(
     sys.stdout,
-    format='<green>{time:YYYY-MM-DD HH:mm:ss.SSS}</green> | <level>{level}</level> | <cyan>{name}</cyan>:<cyan>{function}</cyan>:<cyan>{line}</cyan> - <level>{message}</level>',
+    format=get_format(),
     level='INFO',
 )
 

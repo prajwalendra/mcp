@@ -1,12 +1,11 @@
 """Bearer token authentication provider."""
 
-from typing import Dict
-
 from awslabs.openapi_mcp_server import logger
 from awslabs.openapi_mcp_server.api.config import Config
 from awslabs.openapi_mcp_server.auth.auth_cache import cached_auth_data
 from awslabs.openapi_mcp_server.auth.auth_errors import MissingCredentialsError
 from awslabs.openapi_mcp_server.auth.base_auth import BaseAuthProvider
+from typing import Dict
 
 
 class BearerAuthProvider(BaseAuthProvider):
@@ -21,11 +20,12 @@ class BearerAuthProvider(BaseAuthProvider):
 
         Args:
             config: Application configuration
+
         """
         # Store token before calling super().__init__
         self._token = config.auth_token
         self._token_ttl = getattr(config, 'auth_token_ttl', 3600)  # Default 1 hour
-        
+
         # Call parent initializer which will validate and initialize auth
         super().__init__(config)
 
@@ -34,16 +34,17 @@ class BearerAuthProvider(BaseAuthProvider):
 
         Returns:
             bool: True if token is provided, False otherwise
-            
+
         Raises:
             MissingCredentialsError: If token is missing
+
         """
         if not self._token:
             raise MissingCredentialsError(
-                "Bearer authentication requires a valid token",
+                'Bearer authentication requires a valid token',
                 {
-                    "help": "Provide a token using --auth-token command line argument or AUTH_TOKEN environment variable"
-                }
+                    'help': 'Provide a token using --auth-token command line argument or AUTH_TOKEN environment variable'
+                },
             )
         return True
 
@@ -55,7 +56,7 @@ class BearerAuthProvider(BaseAuthProvider):
         logger.error(
             'Please provide a token using --auth-token command line argument or AUTH_TOKEN environment variable.'
         )
-    
+
     def _initialize_auth(self) -> None:
         """Initialize authentication data after validation."""
         # We'll use the cached method to generate headers
@@ -64,22 +65,23 @@ class BearerAuthProvider(BaseAuthProvider):
     @cached_auth_data(ttl=3600)  # Cache for 1 hour by default
     def _generate_auth_headers(self, token: str) -> Dict[str, str]:
         """Generate authentication headers.
-        
+
         This method is cached to avoid regenerating headers for the same token.
-        
+
         Args:
             token: Bearer token
-            
+
         Returns:
             Dict[str, str]: Authentication headers
+
         """
         # Log without including the token
-        logger.debug("Generating new bearer token headers")
-        
+        logger.debug('Generating new bearer token headers')
+
         # Calculate token length for debugging purposes
         token_length = len(token) if token else 0
-        logger.debug(f"Token length: {token_length} characters")
-        
+        logger.debug(f'Token length: {token_length} characters')
+
         return {'Authorization': f'Bearer {token}'}
 
     @property
@@ -88,5 +90,6 @@ class BearerAuthProvider(BaseAuthProvider):
 
         Returns:
             str: Name of the authentication provider
+
         """
         return 'bearer'

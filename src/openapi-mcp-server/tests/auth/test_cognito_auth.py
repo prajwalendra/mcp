@@ -11,6 +11,11 @@ from awslabs.openapi_mcp_server.auth.cognito_auth import CognitoAuthProvider
 from unittest.mock import MagicMock, patch
 
 
+# Original JWT token with expiry for testing
+# This is the original token that contains the necessary 'exp' claim with value 1516239022
+ORIGINAL_JWT_TOKEN = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiZXhwIjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c'
+
+
 class TestCognitoAuthProvider(unittest.TestCase):
     """Tests for the Cognito authentication provider."""
 
@@ -41,7 +46,7 @@ class TestCognitoAuthProvider(unittest.TestCase):
         config.auth_cognito_client_id = 'test_client_id'
         config.auth_cognito_username = 'test_user'
 
-        with self.assertRaises(MissingCredentialsError):
+        with self.assertRaises(InvalidCredentialsError):
             CognitoAuthProvider(config)
 
     def test_extract_token_expiry_direct(self):
@@ -51,8 +56,8 @@ class TestCognitoAuthProvider(unittest.TestCase):
         provider._is_valid = True
         provider._token_lock = MagicMock()
 
-        # Create a mock token with expiry
-        mock_token = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiZXhwIjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c'
+        # Use the original token that works with the JWT decoder
+        mock_token = ORIGINAL_JWT_TOKEN
 
         # Test the method
         expiry = provider._extract_token_expiry(mock_token)

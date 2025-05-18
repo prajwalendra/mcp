@@ -23,10 +23,11 @@ class APIError(Exception):
             message: Error message
             details: Additional error details
             original_error: Original exception that caused this error
+
         """
         self.status_code = status_code
         self.message = message
-        self.details = details
+        self.details = {} if details is None else details
         self.original_error = original_error
         super().__init__(message)
 
@@ -115,6 +116,7 @@ def extract_error_details(response: httpx.Response) -> Dict[str, Any]:
 
     Returns:
         A dictionary of error details
+
     """
     details = {}
 
@@ -142,6 +144,7 @@ def format_error_message(status_code: int, reason: str, details: Dict[str, Any])
 
     Returns:
         A formatted error message
+
     """
     # Start with the status code and reason
     message = f'{status_code} {reason}'
@@ -265,6 +268,7 @@ async def safe_request(
 
     Raises:
         APIError: If an error occurs during the request
+
     """
     try:
         # Log request details at DEBUG level
@@ -288,12 +292,16 @@ async def safe_request(
                     else:
                         sanitized_headers[header] = '[MASKED]'
                 else:
-                    sanitized_headers[header] = value
+                    sanitized_headers[header] = str(value)
             request_details['headers'] = sanitized_headers
 
         # Log query params if present
         if 'params' in kwargs and kwargs['params']:
-            request_details['params'] = kwargs['params']
+            # Convert all values to strings to avoid type issues
+            params_dict = {}
+            for k, v in kwargs['params'].items():
+                params_dict[k] = str(v) if v is not None else None
+            request_details['params'] = params_dict
 
         logger.debug(f'Making HTTP request: {request_details}')
 

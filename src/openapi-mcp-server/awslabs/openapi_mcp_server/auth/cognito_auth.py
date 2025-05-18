@@ -31,6 +31,7 @@ class CognitoAuthProvider(BearerAuthProvider):
 
         Args:
             config: Application configuration
+
         """
         # Store Cognito-specific configuration
         self._client_id = config.auth_cognito_client_id
@@ -69,6 +70,7 @@ class CognitoAuthProvider(BearerAuthProvider):
         Raises:
             MissingCredentialsError: If required parameters are missing
             ConfigurationError: If configuration is invalid
+
         """
         # Validate required parameters
         if not self._client_id:
@@ -116,6 +118,7 @@ class CognitoAuthProvider(BearerAuthProvider):
 
         Returns:
             Dict[str, str]: Authentication headers
+
         """
         with self._token_lock:
             if self._is_token_expired_or_expiring_soon():
@@ -128,6 +131,7 @@ class CognitoAuthProvider(BearerAuthProvider):
 
         Returns:
             bool: True if token is expired or will expire soon, False otherwise
+
         """
         # Add buffer time (5 minutes) to refresh before actual expiration
         buffer_seconds = 300
@@ -160,6 +164,7 @@ class CognitoAuthProvider(BearerAuthProvider):
 
         Raises:
             AuthenticationError: If authentication fails
+
         """
         client = boto3.client('cognito-idp', region_name=self._region)
 
@@ -349,6 +354,7 @@ class CognitoAuthProvider(BearerAuthProvider):
 
         Raises:
             AuthenticationError: If token refresh fails
+
         """
         client = boto3.client('cognito-idp', region_name=self._region)
 
@@ -415,6 +421,7 @@ class CognitoAuthProvider(BearerAuthProvider):
 
         Returns:
             int: Expiry timestamp
+
         """
         try:
             # Decode the token without verification to extract the expiry
@@ -448,5 +455,6 @@ class CognitoAuthProvider(BearerAuthProvider):
 
         Returns:
             str: Name of the authentication provider
+
         """
         return 'cognito'

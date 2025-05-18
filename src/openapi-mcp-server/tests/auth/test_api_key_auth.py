@@ -1,14 +1,13 @@
 """Tests for API Key authentication provider."""
 
 import pytest
-from unittest.mock import patch, MagicMock
-
 from awslabs.openapi_mcp_server.api.config import Config
 from awslabs.openapi_mcp_server.auth.api_key_auth import ApiKeyAuthProvider
 from awslabs.openapi_mcp_server.auth.auth_errors import (
-    MissingCredentialsError,
     ConfigurationError,
+    MissingCredentialsError,
 )
+from unittest.mock import patch
 
 
 class TestApiKeyAuthProvider:
@@ -51,7 +50,7 @@ class TestApiKeyAuthProvider:
             ApiKeyAuthProvider(config)
 
         # Check the error message
-        assert "API Key authentication requires a valid API key" in str(excinfo.value)
+        assert 'API Key authentication requires a valid API key' in str(excinfo.value)
 
     def test_init_with_invalid_location(self):
         """Test initialization with invalid API key location."""
@@ -66,7 +65,7 @@ class TestApiKeyAuthProvider:
             ApiKeyAuthProvider(config)
 
         # Check the error message
-        assert "Invalid API key location: invalid" in str(excinfo.value)
+        assert 'Invalid API key location: invalid' in str(excinfo.value)
 
     def test_api_key_in_header(self):
         """Test API key in header."""
@@ -153,7 +152,7 @@ class TestApiKeyAuthProvider:
         config = Config()
         config.auth_type = 'api_key'
         config.auth_api_key = 'test_api_key'
-        provider = ApiKeyAuthProvider(config)
+        ApiKeyAuthProvider(config)
 
         # Get the hash method
         hash_method = ApiKeyAuthProvider._hash_api_key
@@ -189,4 +188,4 @@ class TestApiKeyAuthProvider:
         # Check that validation_error is set
         assert provider._validation_error is not None
         assert isinstance(provider._validation_error, MissingCredentialsError)
-        assert "API Key authentication requires a valid API key" in str(provider._validation_error)
+        assert 'API Key authentication requires a valid API key' in str(provider._validation_error)

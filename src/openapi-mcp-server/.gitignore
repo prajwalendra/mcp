@@ -62,6 +62,8 @@ target/
 # Functional test logs
 petstore_test_*.log
 server_output.tmp
+server_log.txt
+server_pid.txt
 *.tmp
 test-docker*.sh
 

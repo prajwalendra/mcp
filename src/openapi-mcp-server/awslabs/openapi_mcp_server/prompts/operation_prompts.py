@@ -38,6 +38,7 @@ def generate_operation_prompt(
 
     Returns:
         str: The generated prompt
+
     """
     result = []
 
@@ -142,6 +143,7 @@ def _format_schema(schema: Dict[str, Any], indent: int = 0) -> str:
 
     Returns:
         str: The formatted schema
+
     """
     result = []
     indent_str = '  ' * indent
@@ -249,6 +251,7 @@ def operation_prompt_fn(
 
     Returns:
         str: The generated operation prompt
+
     """
     return generate_operation_prompt(
         api_name=api_name,
@@ -294,6 +297,7 @@ def create_operation_prompt(
         request_body: The request body schema
         responses: The response schemas
         security: The security requirements
+
     """
     try:
         # Try to import the Prompt class from fastmcp
@@ -335,6 +339,7 @@ def is_complex_operation(
 
     Returns:
         bool: True if the operation is complex, False otherwise
+
     """
     # Check parameters
     if len(parameters) > 2:
@@ -372,6 +377,7 @@ def _is_complex_schema(schema: Dict[str, Any]) -> bool:
 
     Returns:
         bool: True if the schema is complex, False otherwise
+
     """
     schema_type = schema.get('type')
 

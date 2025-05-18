@@ -34,6 +34,7 @@ def validate_openapi_spec(spec: Dict[str, Any]) -> bool:
 
     Returns:
         bool: True if the specification is valid, False otherwise
+
     """
     # Basic validation first
     # Check for required fields
@@ -91,6 +92,7 @@ def extract_api_structure(spec: Dict[str, Any]) -> Dict[str, Any]:
 
     Returns:
         Dict[str, Any]: A structured representation of the API
+
     """
     result = {
         'info': {
@@ -187,6 +189,7 @@ def find_pagination_endpoints(spec: Dict[str, Any]) -> List[Tuple[str, str, Dict
 
     Returns:
         List[Tuple[str, str, Dict[str, Any]]]: List of (path, method, operation) tuples
+
     """
     pagination_endpoints = []
 

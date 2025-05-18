@@ -2,12 +2,10 @@
 
 import base64
 import pytest
-from unittest.mock import patch, MagicMock
-import httpx
-
 from awslabs.openapi_mcp_server.api.config import Config
-from awslabs.openapi_mcp_server.auth.basic_auth import BasicAuthProvider
 from awslabs.openapi_mcp_server.auth.auth_errors import MissingCredentialsError
+from awslabs.openapi_mcp_server.auth.basic_auth import BasicAuthProvider
+from unittest.mock import patch
 
 
 class TestBasicAuthProvider:
@@ -31,7 +29,7 @@ class TestBasicAuthProvider:
             BasicAuthProvider(config)
 
         # Check the error message
-        assert "Basic authentication requires a username" in str(excinfo.value)
+        assert 'Basic authentication requires a username' in str(excinfo.value)
 
     def test_init_with_missing_password(self):
         """Test initialization with missing password."""
@@ -46,7 +44,7 @@ class TestBasicAuthProvider:
             BasicAuthProvider(config)
 
         # Check the error message
-        assert "Basic authentication requires a password" in str(excinfo.value)
+        assert 'Basic authentication requires a password' in str(excinfo.value)
 
     def test_hash_credentials(self):
         """Test credentials hashing."""
@@ -55,7 +53,7 @@ class TestBasicAuthProvider:
         config.auth_type = 'basic'
         config.auth_username = 'testuser'
         config.auth_password = 'testpass'
-        provider = BasicAuthProvider(config)
+        BasicAuthProvider(config)
 
         # Get the hash method
         hash_method = BasicAuthProvider._hash_credentials
@@ -97,7 +95,10 @@ class TestBasicAuthProvider:
             # Check that logger.error was called
             mock_logger.error.assert_called_once()
             # Check that the error message contains the expected text
-            assert "Basic authentication requires both username and password" in mock_logger.error.call_args[0][0]
+            assert (
+                'Basic authentication requires both username and password'
+                in mock_logger.error.call_args[0][0]
+            )
 
     def test_generate_auth_headers(self):
         """Test generation of auth headers."""

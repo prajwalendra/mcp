@@ -17,13 +17,20 @@ class Config:
     api_spec_path: str = ''
 
     # Authentication
-    auth_type: str = 'none'  # none, basic, bearer, api_key
+    auth_type: str = 'none'  # none, basic, bearer, api_key, cognito
     auth_username: str = ''
     auth_password: str = ''
     auth_token: str = ''
     auth_api_key: str = ''
     auth_api_key_name: str = 'api_key'
     auth_api_key_in: str = 'header'  # header, query, cookie
+
+    # Cognito authentication
+    auth_cognito_client_id: str = ''
+    auth_cognito_username: str = ''
+    auth_cognito_password: str = ''
+    auth_cognito_user_pool_id: str = ''
+    auth_cognito_region: str = 'us-east-1'
 
     # Server configuration
     port: int = 8000
@@ -43,6 +50,7 @@ def load_config(args: Any = None) -> Config:
 
     Returns:
         Config: Configuration object
+
     """
     logger.debug('Loading configuration')
 
@@ -68,6 +76,12 @@ def load_config(args: Any = None) -> Config:
         'AUTH_API_KEY': (lambda v: setattr(config, 'auth_api_key', v)),
         'AUTH_API_KEY_NAME': (lambda v: setattr(config, 'auth_api_key_name', v)),
         'AUTH_API_KEY_IN': (lambda v: setattr(config, 'auth_api_key_in', v)),
+        # Cognito authentication environment variables
+        'AUTH_COGNITO_CLIENT_ID': (lambda v: setattr(config, 'auth_cognito_client_id', v)),
+        'AUTH_COGNITO_USERNAME': (lambda v: setattr(config, 'auth_cognito_username', v)),
+        'AUTH_COGNITO_PASSWORD': (lambda v: setattr(config, 'auth_cognito_password', v)),
+        'AUTH_COGNITO_USER_POOL_ID': (lambda v: setattr(config, 'auth_cognito_user_pool_id', v)),
+        'AUTH_COGNITO_REGION': (lambda v: setattr(config, 'auth_cognito_region', v)),
         # Server configuration
         'SERVER_PORT': (lambda v: setattr(config, 'port', int(v))),
         'SERVER_HOST': (lambda v: setattr(config, 'host', v)),
@@ -147,6 +161,27 @@ def load_config(args: Any = None) -> Config:
         if hasattr(args, 'auth_api_key_in') and args.auth_api_key_in:
             logger.debug(f'Setting auth API key location from arguments: {args.auth_api_key_in}')
             config.auth_api_key_in = args.auth_api_key_in
+
+        # Cognito authentication arguments
+        if hasattr(args, 'auth_cognito_client_id') and args.auth_cognito_client_id:
+            logger.debug('Setting Cognito client ID from arguments')
+            config.auth_cognito_client_id = args.auth_cognito_client_id
+
+        if hasattr(args, 'auth_cognito_username') and args.auth_cognito_username:
+            logger.debug('Setting Cognito username from arguments')
+            config.auth_cognito_username = args.auth_cognito_username
+
+        if hasattr(args, 'auth_cognito_password') and args.auth_cognito_password:
+            logger.debug('Setting Cognito password from arguments')
+            config.auth_cognito_password = args.auth_cognito_password
+
+        if hasattr(args, 'auth_cognito_user_pool_id') and args.auth_cognito_user_pool_id:
+            logger.debug('Setting Cognito user pool ID from arguments')
+            config.auth_cognito_user_pool_id = args.auth_cognito_user_pool_id
+
+        if hasattr(args, 'auth_cognito_region') and args.auth_cognito_region:
+            logger.debug(f'Setting Cognito region from arguments: {args.auth_cognito_region}')
+            config.auth_cognito_region = args.auth_cognito_region
 
     # Log final configuration details
     logger.info(

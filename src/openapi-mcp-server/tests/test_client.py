@@ -67,7 +67,7 @@ async def list_tools(client: httpx.AsyncClient) -> List[Dict[str, Any]]:
 
 
 async def main() -> None:
-    """Main function to test the OpenAPI MCP Server."""
+    """Test the OpenAPI MCP Server."""
     # Create HTTP client
     async with httpx.AsyncClient(base_url='http://localhost:8002') as client:
         logger.info('Connected to MCP server')
@@ -83,9 +83,7 @@ async def main() -> None:
         logger.info(f'\nFound {len(operation_prompts)} operation prompts')
 
         # Get content of a few sample prompts
-        sample_prompts = (
-            operation_prompts[:3] if len(operation_prompts) >= 3 else operation_prompts
-        )
+        sample_prompts = operation_prompts[:3] if len(operation_prompts) >= 3 else operation_prompts
         for prompt_name in sample_prompts:
             logger.info(f'\nContent of {prompt_name}:')
             prompt_content = await get_prompt_content(client, prompt_name)
