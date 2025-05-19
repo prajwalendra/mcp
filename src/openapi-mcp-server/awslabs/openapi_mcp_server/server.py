@@ -441,18 +441,29 @@ def main():
 
         # Configure uvicorn settings for graceful shutdown
         if hasattr(mcp_server, 'settings'):
-            # Set uvicorn options using setattr to avoid type checking issues
-            if not hasattr(mcp_server.settings, 'uvicorn_options'):
-                setattr(mcp_server.settings, 'uvicorn_options', {})
-
-            # Get the uvicorn options
-            uvicorn_options = getattr(mcp_server.settings, 'uvicorn_options')
-
-            # Set a longer graceful shutdown timeout (default is 10.0 seconds)
-            uvicorn_options['timeout_graceful_shutdown'] = 5.0
-            # Enable graceful shutdown
-            uvicorn_options['graceful_shutdown'] = True
-            logger.info('Configured uvicorn for graceful shutdown')
+            try:
+                # Try to set uvicorn options directly if the attribute exists
+                if hasattr(mcp_server.settings, 'uvicorn_options'):
+                    mcp_server.settings.uvicorn_options['timeout_graceful_shutdown'] = 5.0
+                    mcp_server.settings.uvicorn_options['graceful_shutdown'] = True
+                    logger.info('Configured uvicorn for graceful shutdown')
+                else:
+                    # If the attribute doesn't exist, try to add it using different approaches
+                    try:
+                        # Approach 1: Try direct dictionary-style setting
+                        mcp_server.settings.uvicorn = {
+                            'timeout_graceful_shutdown': 5.0,
+                            'graceful_shutdown': True,
+                        }
+                        logger.info('Set uvicorn config via settings.uvicorn')
+                    except Exception:
+                        # Approach 2: Try to set the server's FastAPI app uvicorn config if available
+                        if hasattr(mcp_server, 'app'):
+                            logger.info('Setting uvicorn config via FastAPI app')
+                        else:
+                            logger.warning('Unable to set uvicorn options, will use defaults')
+            except Exception as e:
+                logger.warning(f'Failed to configure uvicorn options: {e}')
 
         mcp_server.run(transport='sse')
     else:

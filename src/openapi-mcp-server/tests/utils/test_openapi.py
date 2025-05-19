@@ -79,7 +79,9 @@ class TestOpenAPIUtils:
         mock_get.return_value = mock_response
 
         # Mock the validate_openapi_spec function directly
-        with patch('awslabs.openapi_mcp_server.utils.openapi.validate_openapi_spec', return_value=False):
+        with patch(
+            'awslabs.openapi_mcp_server.utils.openapi.validate_openapi_spec', return_value=False
+        ):
             # Test ValueError is raised for invalid spec
             with pytest.raises(ValueError, match='Invalid OpenAPI specification'):
                 load_openapi_spec(url='https://example.com/api.json')

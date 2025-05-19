@@ -49,8 +49,10 @@ class TestCognitoAuthProvider(unittest.TestCase):
         # Create a mock for the _validate_config method
         with patch.object(CognitoAuthProvider, '_validate_config') as mock_validate:
             # Make _validate_config raise MissingCredentialsError
-            mock_validate.side_effect = MissingCredentialsError('Cognito authentication requires a password')
-            
+            mock_validate.side_effect = MissingCredentialsError(
+                'Cognito authentication requires a password'
+            )
+
             # Test that the exception is raised
             with self.assertRaises(MissingCredentialsError):
                 CognitoAuthProvider(config)
