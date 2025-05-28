@@ -1,11 +1,10 @@
 """Tests for error handling in the API documentation generation modules."""
 
 import unittest
-from unittest.mock import AsyncMock, MagicMock, patch
-
 from awslabs.openapi_mcp_server.prompts.api_documentation import (
     generate_api_documentation,
 )
+from unittest.mock import MagicMock, patch
 
 
 class MockPromptManager:
@@ -23,10 +22,10 @@ class MockPromptManager:
 class TestApiDocumentationErrors(unittest.TestCase):
     """Test cases for API documentation generation error handling."""
 
-    @patch("awslabs.openapi_mcp_server.prompts.api_documentation.generate_generic_workflow_prompts")
-    @patch("awslabs.openapi_mcp_server.prompts.api_documentation.extract_api_structure")
-    @patch("awslabs.openapi_mcp_server.prompts.api_documentation.ENABLE_OPERATION_PROMPTS", True)
-    @patch("awslabs.openapi_mcp_server.prompts.api_documentation.create_operation_prompt")
+    @patch('awslabs.openapi_mcp_server.prompts.api_documentation.generate_generic_workflow_prompts')
+    @patch('awslabs.openapi_mcp_server.prompts.api_documentation.extract_api_structure')
+    @patch('awslabs.openapi_mcp_server.prompts.api_documentation.ENABLE_OPERATION_PROMPTS', True)
+    @patch('awslabs.openapi_mcp_server.prompts.api_documentation.create_operation_prompt')
     async def test_generate_api_documentation_operation_error(
         self, mock_create_prompt, mock_extract, mock_workflow
     ):
@@ -35,25 +34,25 @@ class TestApiDocumentationErrors(unittest.TestCase):
         mock_server = MagicMock()
         mock_server._prompt_manager = MockPromptManager()
         mock_extract.return_value = {}
-        mock_workflow.return_value = "Test workflow"
-        mock_create_prompt.side_effect = Exception("Operation error")
+        mock_workflow.return_value = 'Test workflow'
+        mock_create_prompt.side_effect = Exception('Operation error')
 
         # Test data
-        api_name = "test-api"
+        api_name = 'test-api'
         openapi_spec = {
-            "info": {"title": "Test API", "version": "1.0.0"},
-            "paths": {
-                "/items": {
-                    "get": {
-                        "operationId": "listItems",
-                        "summary": "List all items",
-                        "parameters": [],
-                        "responses": {"200": {"description": "OK"}},
+            'info': {'title': 'Test API', 'version': '1.0.0'},
+            'paths': {
+                '/items': {
+                    'get': {
+                        'operationId': 'listItems',
+                        'summary': 'List all items',
+                        'parameters': [],
+                        'responses': {'200': {'description': 'OK'}},
                     }
                 }
             },
-            "components": {},
-            "servers": [],
+            'components': {},
+            'servers': [],
         }
 
         # Call the function
@@ -61,65 +60,68 @@ class TestApiDocumentationErrors(unittest.TestCase):
 
         # Verify the result
         self.assertIsInstance(result, dict)
-        self.assertIn("workflow_prompts_generated", result)
-        self.assertTrue(result["workflow_prompts_generated"])
-        self.assertIn("operation_prompts_generated", result)
-        self.assertFalse(result["operation_prompts_generated"])
+        self.assertIn('workflow_prompts_generated', result)
+        self.assertTrue(result['workflow_prompts_generated'])
+        self.assertIn('operation_prompts_generated', result)
+        self.assertFalse(result['operation_prompts_generated'])
 
         # Verify the mocks were called
         mock_extract.assert_called_once_with(openapi_spec)
         mock_workflow.assert_called_once()
         mock_create_prompt.assert_called_once()
 
-    @patch("awslabs.openapi_mcp_server.prompts.api_documentation.generate_generic_workflow_prompts")
-    @patch("awslabs.openapi_mcp_server.prompts.api_documentation.extract_api_structure")
-    @patch("awslabs.openapi_mcp_server.prompts.api_documentation.ENABLE_OPERATION_PROMPTS", True)
-    async def test_generate_api_documentation_invalid_components(
-        self, mock_extract, mock_workflow
-    ):
+    @patch('awslabs.openapi_mcp_server.prompts.api_documentation.generate_generic_workflow_prompts')
+    @patch('awslabs.openapi_mcp_server.prompts.api_documentation.extract_api_structure')
+    @patch('awslabs.openapi_mcp_server.prompts.api_documentation.ENABLE_OPERATION_PROMPTS', True)
+    async def test_generate_api_documentation_invalid_components(self, mock_extract, mock_workflow):
         """Test API documentation generation with invalid components."""
         # Setup mocks
         mock_server = MagicMock()
         mock_server._prompt_manager = MockPromptManager()
         mock_extract.return_value = {}
-        mock_workflow.return_value = "Test workflow"
+        mock_workflow.return_value = 'Test workflow'
 
         # Test data
-        api_name = "test-api"
+        api_name = 'test-api'
         openapi_spec = {
-            "info": {"title": "Test API", "version": "1.0.0"},
-            "paths": {
-                "/items": {
-                    "get": {
-                        "operationId": "listItems",
-                        "summary": "List all items",
-                        "parameters": [],
-                        "responses": {"200": {"description": "OK"}},
+            'info': {'title': 'Test API', 'version': '1.0.0'},
+            'paths': {
+                '/items': {
+                    'get': {
+                        'operationId': 'listItems',
+                        'summary': 'List all items',
+                        'parameters': [],
+                        'responses': {'200': {'description': 'OK'}},
                     }
                 }
             },
-            "components": "invalid",  # This should be a dict, not a string
-            "servers": [],
+            'components': 'invalid',  # This should be a dict, not a string
+            'servers': [],
         }
 
         # Call the function
         with patch(
-            "awslabs.openapi_mcp_server.prompts.api_documentation.create_operation_prompt"
+            'awslabs.openapi_mcp_server.prompts.api_documentation.create_operation_prompt'
         ) as mock_create_prompt:
             result = await generate_api_documentation(mock_server, api_name, openapi_spec)
+            # Verify that create_operation_prompt was called
+            mock_create_prompt.assert_called_once()
 
         # Verify the result
         self.assertIsInstance(result, dict)
-        self.assertIn("workflow_prompts_generated", result)
-        self.assertTrue(result["workflow_prompts_generated"])
-        self.assertIn("operation_prompts_generated", result)
-        self.assertTrue(result["operation_prompts_generated"])
+        self.assertIn('workflow_prompts_generated', result)
+        self.assertTrue(result['workflow_prompts_generated'])
+        self.assertIn('operation_prompts_generated', result)
+        self.assertTrue(result['operation_prompts_generated'])
 
-    @patch("awslabs.openapi_mcp_server.prompts.api_documentation.generate_generic_workflow_prompts")
-    @patch("awslabs.openapi_mcp_server.prompts.api_documentation.extract_api_structure")
-    @patch("awslabs.openapi_mcp_server.prompts.api_documentation.ENABLE_OPERATION_PROMPTS", True)
-    @patch("awslabs.openapi_mcp_server.prompts.api_documentation.GENERATE_PROMPTS_FOR_COMPLEX_OPERATIONS_ONLY", True)
-    @patch("awslabs.openapi_mcp_server.prompts.api_documentation.is_complex_operation")
+    @patch('awslabs.openapi_mcp_server.prompts.api_documentation.generate_generic_workflow_prompts')
+    @patch('awslabs.openapi_mcp_server.prompts.api_documentation.extract_api_structure')
+    @patch('awslabs.openapi_mcp_server.prompts.api_documentation.ENABLE_OPERATION_PROMPTS', True)
+    @patch(
+        'awslabs.openapi_mcp_server.prompts.api_documentation.GENERATE_PROMPTS_FOR_COMPLEX_OPERATIONS_ONLY',
+        True,
+    )
+    @patch('awslabs.openapi_mcp_server.prompts.api_documentation.is_complex_operation')
     async def test_generate_api_documentation_missing_operation_id(
         self, mock_is_complex, mock_extract, mock_workflow
     ):
@@ -128,88 +130,86 @@ class TestApiDocumentationErrors(unittest.TestCase):
         mock_server = MagicMock()
         mock_server._prompt_manager = MockPromptManager()
         mock_extract.return_value = {}
-        mock_workflow.return_value = "Test workflow"
+        mock_workflow.return_value = 'Test workflow'
         mock_is_complex.return_value = True
 
         # Test data
-        api_name = "test-api"
+        api_name = 'test-api'
         openapi_spec = {
-            "info": {"title": "Test API", "version": "1.0.0"},
-            "paths": {
-                "/items": {
-                    "get": {
+            'info': {'title': 'Test API', 'version': '1.0.0'},
+            'paths': {
+                '/items': {
+                    'get': {
                         # Missing operationId
-                        "summary": "List all items",
-                        "parameters": [],
-                        "responses": {"200": {"description": "OK"}},
+                        'summary': 'List all items',
+                        'parameters': [],
+                        'responses': {'200': {'description': 'OK'}},
                     }
                 }
             },
-            "components": {},
-            "servers": [],
+            'components': {},
+            'servers': [],
         }
 
         # Call the function
         with patch(
-            "awslabs.openapi_mcp_server.prompts.api_documentation.create_operation_prompt"
+            'awslabs.openapi_mcp_server.prompts.api_documentation.create_operation_prompt'
         ) as mock_create_prompt:
             result = await generate_api_documentation(mock_server, api_name, openapi_spec)
 
         # Verify the result
         self.assertIsInstance(result, dict)
-        self.assertIn("workflow_prompts_generated", result)
-        self.assertTrue(result["workflow_prompts_generated"])
-        self.assertIn("operation_prompts_generated", result)
-        self.assertFalse(result["operation_prompts_generated"])
+        self.assertIn('workflow_prompts_generated', result)
+        self.assertTrue(result['workflow_prompts_generated'])
+        self.assertIn('operation_prompts_generated', result)
+        self.assertFalse(result['operation_prompts_generated'])
 
         # Verify the mocks were called
         mock_extract.assert_called_once_with(openapi_spec)
         mock_workflow.assert_called_once()
         mock_create_prompt.assert_not_called()
 
-    @patch("awslabs.openapi_mcp_server.prompts.api_documentation.generate_generic_workflow_prompts")
-    @patch("awslabs.openapi_mcp_server.prompts.api_documentation.extract_api_structure")
-    @patch("awslabs.openapi_mcp_server.prompts.api_documentation.ENABLE_OPERATION_PROMPTS", True)
-    async def test_generate_api_documentation_unsupported_method(
-        self, mock_extract, mock_workflow
-    ):
+    @patch('awslabs.openapi_mcp_server.prompts.api_documentation.generate_generic_workflow_prompts')
+    @patch('awslabs.openapi_mcp_server.prompts.api_documentation.extract_api_structure')
+    @patch('awslabs.openapi_mcp_server.prompts.api_documentation.ENABLE_OPERATION_PROMPTS', True)
+    async def test_generate_api_documentation_unsupported_method(self, mock_extract, mock_workflow):
         """Test API documentation generation with unsupported HTTP method."""
         # Setup mocks
         mock_server = MagicMock()
         mock_server._prompt_manager = MockPromptManager()
         mock_extract.return_value = {}
-        mock_workflow.return_value = "Test workflow"
+        mock_workflow.return_value = 'Test workflow'
 
         # Test data
-        api_name = "test-api"
+        api_name = 'test-api'
         openapi_spec = {
-            "info": {"title": "Test API", "version": "1.0.0"},
-            "paths": {
-                "/items": {
-                    "options": {  # Unsupported method
-                        "operationId": "optionsItems",
-                        "summary": "Options for items",
-                        "parameters": [],
-                        "responses": {"200": {"description": "OK"}},
+            'info': {'title': 'Test API', 'version': '1.0.0'},
+            'paths': {
+                '/items': {
+                    'options': {  # Unsupported method
+                        'operationId': 'optionsItems',
+                        'summary': 'Options for items',
+                        'parameters': [],
+                        'responses': {'200': {'description': 'OK'}},
                     }
                 }
             },
-            "components": {},
-            "servers": [],
+            'components': {},
+            'servers': [],
         }
 
         # Call the function
         with patch(
-            "awslabs.openapi_mcp_server.prompts.api_documentation.create_operation_prompt"
+            'awslabs.openapi_mcp_server.prompts.api_documentation.create_operation_prompt'
         ) as mock_create_prompt:
             result = await generate_api_documentation(mock_server, api_name, openapi_spec)
 
         # Verify the result
         self.assertIsInstance(result, dict)
-        self.assertIn("workflow_prompts_generated", result)
-        self.assertTrue(result["workflow_prompts_generated"])
-        self.assertIn("operation_prompts_generated", result)
-        self.assertFalse(result["operation_prompts_generated"])
+        self.assertIn('workflow_prompts_generated', result)
+        self.assertTrue(result['workflow_prompts_generated'])
+        self.assertIn('operation_prompts_generated', result)
+        self.assertFalse(result['operation_prompts_generated'])
 
         # Verify the mocks were called
         mock_extract.assert_called_once_with(openapi_spec)
@@ -217,5 +217,5 @@ class TestApiDocumentationErrors(unittest.TestCase):
         mock_create_prompt.assert_not_called()
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     unittest.main()

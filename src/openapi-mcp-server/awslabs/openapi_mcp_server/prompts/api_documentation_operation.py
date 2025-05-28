@@ -2,23 +2,19 @@
 
 import re
 from awslabs.openapi_mcp_server import logger
-from awslabs.openapi_mcp_server.prompts.base import (
-    GENERATE_PROMPTS_FOR_COMPLEX_OPERATIONS_ONLY,
-    format_display_name,
-    format_parameter_description,
-)
 from typing import Any, Dict, List, Optional
 
 
 def _format_schema(schema: Dict[str, Any], indent: int = 0) -> str:
     """Format a JSON schema concisely.
-    
+
     Args:
         schema: The JSON schema
         indent: The indentation level
-        
+
     Returns:
         str: The formatted schema
+
     """
     result = []
     indent_str = '  ' * indent
@@ -28,35 +24,41 @@ def _format_schema(schema: Dict[str, Any], indent: int = 0) -> str:
         result.append(f'{indent_str}**Type**: Object')
         properties = schema.get('properties', {})
         required = schema.get('required', [])
-        
+
         if properties:
             result.append(f'{indent_str}**Properties**:')
             for prop_name, prop_schema in properties.items():
                 prop_type = prop_schema.get('type', 'any')
                 req_str = ' (required)' if prop_name in required else ''
-                desc = f": {prop_schema.get('description')}" if prop_schema.get('description') else ""
-                
+                desc = (
+                    f': {prop_schema.get("description")}' if prop_schema.get('description') else ''
+                )
+
                 # Concise property representation
                 result.append(f'{indent_str}- **{prop_name}**{req_str}: {prop_type}{desc}')
-                
+
                 # Only recurse for complex nested objects
-                if prop_type == 'object' and 'properties' in prop_schema and len(prop_schema['properties']) > 2:
+                if (
+                    prop_type == 'object'
+                    and 'properties' in prop_schema
+                    and len(prop_schema['properties']) > 2
+                ):
                     result.append(_format_schema(prop_schema, indent + 1))
                 elif prop_type == 'array' and 'items' in prop_schema:
                     items = prop_schema.get('items', {})
                     items_type = items.get('type', 'any')
                     result.append(f'{indent_str}  **Items**: {items_type}')
-                    
+
                 # Add enum values inline
                 if 'enum' in prop_schema:
                     enum_values = ', '.join([f'`{v}`' for v in prop_schema['enum']])
                     result.append(f'{indent_str}  **Values**: {enum_values}')
-    
+
     elif schema_type == 'array':
         items = schema.get('items', {})
         items_type = items.get('type', 'any')
         result.append(f'{indent_str}**Type**: Array of {items_type}')
-        
+
     else:
         result.append(f'{indent_str}**Type**: {schema_type}')
         if 'format' in schema:
@@ -70,46 +72,47 @@ def _format_schema(schema: Dict[str, Any], indent: int = 0) -> str:
 
 def generate_simple_description(operation_id: str, method: str, path: str) -> str:
     """Generate a simple, standardized description based on HTTP method and path.
-    
+
     Args:
         operation_id: The operation ID
         method: The HTTP method
         path: The API path
-        
+
     Returns:
         str: A standardized description
+
     """
     # Special case for findPetsByStatus
-    if operation_id == "findPetsByStatus":
-        return "Retrieve pets filtered by their status."
-    
+    if operation_id == 'findPetsByStatus':
+        return 'Retrieve pets filtered by their status.'
+
     # Extract the main resource from the path
     # e.g., /pet/findByStatus -> pet, /users/{userId} -> user
     path_parts = [p for p in path.split('/') if p and not p.startswith('{')]
-    resource = path_parts[0] if path_parts else "resource"
-    
+    resource = path_parts[0] if path_parts else 'resource'
+
     # Pluralize for GET operations that return collections
     if method.lower() == 'get' and not path.endswith('}'):
-        resource = f"{resource}s" if not resource.endswith('s') else resource
-    
+        resource = f'{resource}s' if not resource.endswith('s') else resource
+
     # Create description based on HTTP method
     if method.lower() == 'get':
         if 'status' in operation_id.lower():
-            return f"Retrieve {resource}s filtered by their status."
+            return f'Retrieve {resource}s filtered by their status.'
         elif 'by' in operation_id.lower():
-            return f"Retrieve {resource}s based on the specified criteria."
+            return f'Retrieve {resource}s based on the specified criteria.'
         else:
-            return f"Retrieve {resource} information."
+            return f'Retrieve {resource} information.'
     elif method.lower() == 'post':
-        return f"Create a new {resource}."
+        return f'Create a new {resource}.'
     elif method.lower() == 'put':
-        return f"Update an existing {resource}."
+        return f'Update an existing {resource}.'
     elif method.lower() == 'delete':
-        return f"Delete an existing {resource}."
+        return f'Delete an existing {resource}.'
     elif method.lower() == 'patch':
-        return f"Partially update an existing {resource}."
+        return f'Partially update an existing {resource}.'
     else:
-        return f"Perform operations on {resource}."
+        return f'Perform operations on {resource}.'
 
 
 def generate_operation_prompt(
@@ -126,7 +129,7 @@ def generate_operation_prompt(
     security: Optional[List[Dict[str, List[str]]]] = None,
 ) -> str:
     """Generate a concise prompt for an API operation.
-    
+
     Args:
         api_name: The name of the API
         operation_id: The operation ID
@@ -139,72 +142,73 @@ def generate_operation_prompt(
         request_body: The request body schema
         responses: The response schemas
         security: The security requirements
-        
+
     Returns:
         str: The generated prompt
+
     """
     result = []
-    
+
     # Add title
     result.append(f'# {operation_id}')
-    
+
     # Generate improved description
     improved_description = generate_simple_description(operation_id, method, path)
     result.append(improved_description)
-    
+
     # Add logging for description generation
-    logger.debug(f"Generated description for {operation_id}: {improved_description}")
-    
+    logger.debug(f'Generated description for {operation_id}: {improved_description}')
+
     # Add API details in a compact format
-    auth_info = ""
+    auth_info = ''
     if security:
         auth_schemes = []
         for sec_req in security:
             for scheme, scopes in sec_req.items():
-                scope_text = f" ({', '.join(scopes)})" if scopes else ""
-                auth_schemes.append(f"{scheme}{scope_text}")
+                scope_text = f' ({", ".join(scopes)})' if scopes else ''
+                auth_schemes.append(f'{scheme}{scope_text}')
         if auth_schemes:
-            auth_info = f" | **Auth**: {', '.join(auth_schemes)}"
-    
+            auth_info = f' | **Auth**: {", ".join(auth_schemes)}'
+
     result.append(f'**Method**: {method.upper()} | **Path**: `{path}`{auth_info}')
-    
+
     # Add parameters section if there are parameters
     if parameters:
         path_params = [p for p in parameters if p.get('in') == 'path']
         query_params = [p for p in parameters if p.get('in') == 'query']
         header_params = [p for p in parameters if p.get('in') == 'header']
-        
+
         if path_params:
             result.append('\n**Path Parameters**:')
             for param in path_params:
                 name = param.get('name', '')
                 required = '*' if param.get('required') else ''
-                desc = f" - {param.get('description')}" if param.get('description') else ""
-                result.append(f"- {name}{required}{desc}")
-            
+                desc = f' - {param.get("description")}' if param.get('description') else ''
+                result.append(f'- {name}{required}{desc}')
+
         if query_params:
             result.append('\n**Query Parameters**:')
             for param in query_params:
                 name = param.get('name', '')
                 required = '*' if param.get('required') else ''
-                desc = f" - {param.get('description')}" if param.get('description') else ""
-                
+                desc = f' - {param.get("description")}' if param.get('description') else ''
+
                 # Add enum values if available
                 schema = param.get('schema', {})
                 if schema and 'enum' in schema:
                     enum_values = ', '.join([f'`{v}`' for v in schema['enum']])
-                    desc += f" Values: {enum_values}"
-                    
-                result.append(f"- {name}{required}{desc}")
-            
+                    desc += f' Values: {enum_values}'
+
+                result.append(f'- {name}{required}{desc}')
+
         if header_params:
             result.append('\n**Header Parameters**:')
             for param in header_params:
                 name = param.get('name', '')
                 required = '*' if param.get('required') else ''
-                desc = f" - {param.get('description')}" if param.get('description') else ""
-                result.append(f"- {name}{required}{desc}")
-    
+                desc = f' - {param.get("description")}' if param.get('description') else ''
+                result.append(f'- {name}{required}{desc}')
+
     # Add request body section if there is a request body
     if request_body and request_body.get('content'):
         result.append('\n**Request Body**:')
@@ -214,84 +218,86 @@ def generate_operation_prompt(
             schema = content_schema.get('schema', {})
             if schema:
                 result.append(_format_schema(schema))
-    
+
     # Add responses section if there are responses
     if responses:
         result.append('\n**Responses**:')
         for status_code, response in responses.items():
-            result.append(f"- {status_code}: {response.get('description', '')}")
-    
+            result.append(f'- {status_code}: {response.get("description", "")}')
+
     # Add usage examples
     result.append('\n**Example usage**:')
     result.append('```python')
-    
+
     # Create example based on operation type
     if method.lower() == 'get':
         # For GET operations
-        param_str = ""
+        param_str = ''
         if parameters:
             required_params = [p for p in parameters if p.get('required')]
             if required_params:
-                param_str = ", ".join([f"{p.get('name')}=\"value\"" for p in required_params])
-        
-        result.append(f"# {summary or f'Call the {operation_id} operation'}")
-        result.append(f"response = await {operation_id}({param_str})")
-        result.append("")
-        result.append("# Process the response")
-        result.append("if response:")
-        result.append("    print(f\"Got {len(response)} items\")")
-    
+                param_str = ', '.join([f'{p.get("name")}="value"' for p in required_params])
+
+        result.append(f'# {summary or f"Call the {operation_id} operation"}')
+        result.append(f'response = await {operation_id}({param_str})')
+        result.append('')
+        result.append('# Process the response')
+        result.append('if response:')
+        result.append('    print(f"Got {len(response)} items")')
+
     elif method.lower() == 'post':
         # For POST operations
-        result.append(f"# {summary or f'Call the {operation_id} operation'}")
+        result.append(f'# {summary or f"Call the {operation_id} operation"}')
         if request_body:
-            result.append("data = {")
+            result.append('data = {')
             schema = next(iter(request_body.get('content', {}).values()), {}).get('schema', {})
             properties = schema.get('properties', {})
             required = schema.get('required', [])
-            
+
             for prop_name, prop_schema in properties.items():
-                req_comment = " # required" if prop_name in required else ""
+                req_comment = ' # required' if prop_name in required else ''
                 prop_type = prop_schema.get('type')
                 if prop_type == 'string':
-                    result.append(f"    \"{prop_name}\": \"value\",{req_comment}")
+                    result.append(f'    "{prop_name}": "value",{req_comment}')
                 elif prop_type == 'integer' or prop_type == 'number':
-                    result.append(f"    \"{prop_name}\": 0,{req_comment}")
+                    result.append(f'    "{prop_name}": 0,{req_comment}')
                 elif prop_type == 'boolean':
-                    result.append(f"    \"{prop_name}\": False,{req_comment}")
+                    result.append(f'    "{prop_name}": False,{req_comment}')
                 elif prop_type == 'array':
-                    result.append(f"    \"{prop_name}\": [],{req_comment}")
+                    result.append(f'    "{prop_name}": [],{req_comment}')
                 elif prop_type == 'object':
-                    result.append(f"    \"{prop_name}\": {{}},{req_comment}")
+                    result.append(f'    "{prop_name}": {{}},{req_comment}')
                 else:
-                    result.append(f"    \"{prop_name}\": None,{req_comment}")
-            
-            result.append("}")
-            result.append(f"response = await {operation_id}(data)")
+                    result.append(f'    "{prop_name}": None,{req_comment}')
+
+            result.append('}')
+            result.append(f'response = await {operation_id}(data)')
         else:
-            result.append(f"response = await {operation_id}()")
-    
+            result.append(f'response = await {operation_id}()')
+
     else:
         # For other operations
-        result.append(f"# {summary or f'Call the {operation_id} operation'}")
-        param_str = ""
+        result.append(f'# {summary or f"Call the {operation_id} operation"}')
+        param_str = ''
         if parameters:
             required_params = [p for p in parameters if p.get('required')]
             if required_params:
-                param_str = ", ".join([f"{p.get('name')}=\"value\"" for p in required_params])
-        
-        result.append(f"response = await {operation_id}({param_str})")
-    
-    result.append("```")
-    
+                param_str = ', '.join([f'{p.get("name")}="value"' for p in required_params])
+
+        result.append(f'response = await {operation_id}({param_str})')
+
+    result.append('```')
+
     # Add common errors
     if responses:
-        error_responses = {k: v for k, v in responses.items() if k.startswith('4') or k.startswith('5')}
+        error_responses = {
+            k: v for k, v in responses.items() if k.startswith('4') or k.startswith('5')
+        }
         if error_responses:
             result.append('\n**Common errors**:')
             for status_code, response in error_responses.items():
-                result.append(f"- {status_code}: {response.get('description', '')}")
-    
+                result.append(f'- {status_code}: {response.get("description", "")}')
+
     return '\n'.join(result)
 
 
@@ -325,6 +331,7 @@ def operation_prompt_fn(
 
     Returns:
         str: The generated operation prompt
+
     """
     return generate_operation_prompt(
         api_name=api_name,
@@ -349,6 +356,7 @@ def get_required_parameters(operation: Dict[str, Any]) -> List[Dict[str, Any]]:
 
     Returns:
         List[Dict[str, Any]]: List of required parameters
+
     """
     parameters = operation.get('parameters', [])
     return [p for p in parameters if p.get('required', False)]
@@ -363,6 +371,7 @@ def get_required_body_fields(operation: Dict[str, Any], components: Dict[str, An
 
     Returns:
         List[str]: List of required field names
+
     """
     request_body = operation.get('requestBody', {})
     if not request_body or not request_body.get('required', False):
@@ -401,6 +410,7 @@ def generate_simple_prompt(
 
     Returns:
         str: A simple natural language prompt
+
     """
     # Get operation summary or create one
     summary = operation.get('summary', '')
@@ -468,6 +478,7 @@ def create_operation_prompt(
         request_body: The request body schema
         responses: The response schemas
         security: The security requirements
+
     """
     try:
         # Try to import the Prompt class from fastmcp
@@ -475,34 +486,34 @@ def create_operation_prompt(
 
         # Create a clean, readable name (snake_case)
         prompt_name = operation_id.lower()
-        
+
         # Create a concise description
-        prompt_description = summary or f"{method.upper()} {path}"
-        
+        prompt_description = summary or f'{method.upper()} {path}'
+
         # Extract required parameters from operation
         prompt_arguments = []
-        
+
         # Add path and query parameters
         if parameters:
             for param in parameters:
                 # Get parameter details
                 name = param.get('name', '')
-                desc = param.get('description', f"The {name} parameter")
+                desc = param.get('description', f'The {name} parameter')
                 required = param.get('required', False)
-                
+
                 # Create optimized description
                 schema = param.get('schema', {})
                 if schema and 'enum' in schema:
                     enum_values = ', '.join([f'`{v}`' for v in schema['enum']])
-                    desc = f"Filter by: {enum_values}" if "filter" in desc.lower() else f"{desc} ({enum_values})"
-                
+                    desc = (
+                        f'Filter by: {enum_values}'
+                        if 'filter' in desc.lower()
+                        else f'{desc} ({enum_values})'
+                    )
+
                 # Add to arguments list
-                prompt_arguments.append({
-                    "name": name,
-                    "description": desc,
-                    "required": required
-                })
-        
+                prompt_arguments.append({'name': name, 'description': desc, 'required': required})
+
         # Add request body parameters if present
         if request_body and 'content' in request_body:
             content = next(iter(request_body.get('content', {}).items()), None)
@@ -513,18 +524,20 @@ def create_operation_prompt(
                     required_fields = schema.get('required', [])
                     for prop_name, prop_schema in schema['properties'].items():
                         # Create optimized description
-                        prop_desc = prop_schema.get('description', f"The {prop_name} property")
+                        prop_desc = prop_schema.get('description', f'The {prop_name} property')
                         if 'enum' in prop_schema:
                             enum_values = ', '.join([f'`{v}`' for v in prop_schema['enum']])
-                            prop_desc = f"{prop_desc}: {enum_values}"
-                        
+                            prop_desc = f'{prop_desc}: {enum_values}'
+
                         # Add to arguments list
-                        prompt_arguments.append({
-                            "name": prop_name,
-                            "description": prop_desc,
-                            "required": prop_name in required_fields
-                        })
-        
+                        prompt_arguments.append(
+                            {
+                                'name': prop_name,
+                                'description': prop_desc,
+                                'required': prop_name in required_fields,
+                            }
+                        )
+
         # Generate the operation documentation for use in the prompt
         operation_doc = generate_operation_prompt(
             api_name=api_name,
@@ -539,27 +552,16 @@ def create_operation_prompt(
             responses=responses,
             security=security,
         )
-        
+
         # Create the prompt with proper MCP structure
-        # Store arguments in metadata since Prompt doesn't have an arguments parameter
-        metadata = {
-            "api_info": {
-                "api_name": api_name,
-                "operation_id": operation_id,
-                "method": method,
-                "path": path
-            },
-            "arguments": prompt_arguments
-        }
-        
+        # pyright: ignore[reportCallIssue]
         prompt = Prompt(
             name=prompt_name,
-            content=operation_doc,
             description=prompt_description,
-            metadata=metadata,
-            fn=lambda: operation_doc
+            arguments=prompt_arguments,
+            fn=lambda **kwargs: operation_doc,
         )
-        
+
         # Add the prompt to the server
         server._prompt_manager.add_prompt(prompt)
         logger.debug(f'Added operation prompt: {prompt_name}')
@@ -586,6 +588,7 @@ def is_complex_operation(
 
     Returns:
         bool: True if the operation is complex, False otherwise
+
     """
     # Check parameters
     if len(parameters) > 2:
@@ -623,6 +626,7 @@ def _is_complex_schema(schema: Dict[str, Any]) -> bool:
 
     Returns:
         bool: True if the schema is complex, False otherwise
+
     """
     schema_type = schema.get('type')
 

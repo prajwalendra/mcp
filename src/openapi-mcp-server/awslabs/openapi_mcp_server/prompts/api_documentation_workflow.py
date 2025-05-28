@@ -1,25 +1,25 @@
 """Workflow prompt generation for OpenAPI specifications."""
 
 from awslabs.openapi_mcp_server import logger
-from typing import Any, Dict
 
 
 def _generate_list_get_update_workflow(resource_type, list_op, get_op, update_op):
     """Generate a workflow for list → get → update pattern.
-    
+
     Args:
         resource_type: The resource type
         list_op: The list operation
         get_op: The get operation
         update_op: The update operation
-        
+
     Returns:
         str: The generated workflow
+
     """
     list_op_id = list_op.get('operationId', 'list')
     get_op_id = get_op.get('operationId', 'get')
     update_op_id = update_op.get('operationId', 'update')
-    
+
     return f"""### List, Get, Update {resource_type}s
 
 ```python
@@ -40,22 +40,23 @@ updated = await {update_op_id}({resource_type.lower()}_id, update_data)
 
 def _generate_search_create_workflow(search_op, create_op):
     """Generate a workflow for search → create pattern.
-    
+
     Args:
         search_op: The search operation
         create_op: The create operation
-        
+
     Returns:
         str: The generated workflow
+
     """
     search_op_id = search_op.get('operationId', 'search')
     create_op_id = create_op.get('operationId', 'create')
-    
+
     # Extract resource type from create operation ID
     resource_type = 'Resource'
     if create_op_id and create_op_id.startswith('create'):
         resource_type = create_op_id[6:]  # Remove "create" prefix
-    
+
     return f"""### Search and Create {resource_type}
 
 ```python
@@ -86,13 +87,14 @@ async def generate_generic_workflow_prompts(server, api_name, api_structure, com
 
     Returns:
         str: The generated workflow section for the API overview
+
     """
     try:
         from fastmcp.prompts.prompt import Prompt
     except ImportError:
-        logger.warning("Failed to import Prompt from fastmcp")
+        logger.warning('Failed to import Prompt from fastmcp')
         return '\n## Common Workflows\n\nNo workflows available (fastmcp not found).'
-        
+
     # Validate that inputs are dictionaries
     if not isinstance(api_structure, dict):
         logger.warning(
@@ -132,8 +134,12 @@ async def generate_generic_workflow_prompts(server, api_name, api_structure, com
             # Initialize resource operations if not exists
             if resource_type not in resource_operations:
                 resource_operations[resource_type] = {
-                    'list': None, 'get': None, 'create': None,
-                    'update': None, 'delete': None, 'search': None,
+                    'list': None,
+                    'get': None,
+                    'create': None,
+                    'update': None,
+                    'delete': None,
+                    'search': None,
                 }
 
             # Categorize operations
@@ -185,70 +191,57 @@ async def generate_generic_workflow_prompts(server, api_name, api_structure, com
 
                 if search_op and create_op:
                     workflows.append(_generate_search_create_workflow(search_op, create_op))
-                    
+
                 # Create MCP-compliant workflow prompt
                 if list_op and get_op and update_op:
                     # Create workflow prompt name
-                    prompt_name = f"{resource_type.lower()}_workflow"
-                    
+                    prompt_name = f'{resource_type.lower()}_workflow'
+
                     # Create concise description
-                    prompt_description = f"Perform operations on {resource_type} resources"
-                    
+                    prompt_description = f'Perform operations on {resource_type} resources'
+
                     # Define workflow arguments
                     prompt_arguments = [
                         {
-                            "name": "workflow_type",
-                            "description": "Workflow: list_get_update or search_create",
-                            "required": True
+                            'name': 'workflow_type',
+                            'description': 'Workflow: list_get_update or search_create',
+                            'required': True,
                         },
                         {
-                            "name": f"{resource_type.lower()}_id",
-                            "description": f"{resource_type} ID for get/update operations",
-                            "required": False
+                            'name': f'{resource_type.lower()}_id',
+                            'description': f'{resource_type} ID for get/update operations',
+                            'required': False,
                         },
                         {
-                            "name": "filter",
-                            "description": "Filter criteria for list/search operations",
-                            "required": False
+                            'name': 'filter',
+                            'description': 'Filter criteria for list/search operations',
+                            'required': False,
                         },
                         {
-                            "name": "data",
-                            "description": f"Data for create/update {resource_type}",
-                            "required": False
-                        }
+                            'name': 'data',
+                            'description': f'Data for create/update {resource_type}',
+                            'required': False,
+                        },
                     ]
-                    
+
                     # Generate workflow documentation
                     workflow_doc = _generate_list_get_update_workflow(
                         resource_type, list_op, get_op, update_op
                     )
-                    
+
                     # Create the workflow prompt
-                    # Store arguments in metadata since Prompt doesn't have an arguments parameter
-                    metadata = {
-                        "api_info": {
-                            "api_name": api_name,
-                            "resource_type": resource_type,
-                            "operations": [
-                                op.get('operationId') for op in 
-                                [list_op, get_op, update_op, search_op, create_op] 
-                                if op and 'operationId' in op
-                            ]
-                        },
-                        "arguments": prompt_arguments
-                    }
-                    
+                    # pyright: ignore[reportCallIssue]
                     workflow_prompt = Prompt(
                         name=prompt_name,
-                        content=workflow_doc,
                         description=prompt_description,
-                        metadata=metadata
+                        arguments=prompt_arguments,
+                        fn=lambda **kwargs: workflow_doc,
                     )
-                    
+
                     # Add the prompt to the server
                     server._prompt_manager.add_prompt(workflow_prompt)
                     logger.debug(f'Added workflow prompt: {prompt_name}')
-                
+
             except Exception as e:
                 logger.warning(f'Error generating workflows for resource type {resource_type}: {e}')
                 continue
