@@ -36,10 +36,20 @@ async def test_generate_api_instructions():
 
     # Mock the required functions
     with patch(
-        'awslabs.openapi_mcp_server.prompts.prompt_orchestrator.generate_unified_prompts'
-    ) as mock_unified:
+        'awslabs.openapi_mcp_server.prompts.prompt_orchestrator._generate_api_documentation'
+    ) as mock_documentation:
+        # Set up the mock to return a value
+        mock_documentation.return_value = {
+            "operation_prompts_generated": True,
+            "workflow_prompts_generated": True,
+        }
+        
         # Call the function
-        await generate_api_instructions(server, api_name, openapi_spec)
+        result = await generate_api_instructions(server, api_name, openapi_spec)
 
         # Verify the result
-        mock_unified.assert_called_once_with(server, api_name, openapi_spec)
+        mock_documentation.assert_called_once_with(server, api_name, openapi_spec)
+        assert result == {
+            "operation_prompts_generated": True,
+            "workflow_prompts_generated": True,
+        }

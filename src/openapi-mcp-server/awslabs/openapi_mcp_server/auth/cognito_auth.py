@@ -1,6 +1,7 @@
 """Cognito User Pool authentication provider."""
 
 import boto3
+import jwt
 import os
 import threading
 import time
@@ -14,7 +15,6 @@ from awslabs.openapi_mcp_server.auth.auth_errors import (
     NetworkError,
 )
 from awslabs.openapi_mcp_server.auth.bearer_auth import BearerAuthProvider
-from jose import jwt
 from typing import Dict
 
 

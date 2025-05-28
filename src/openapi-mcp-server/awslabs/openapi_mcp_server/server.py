@@ -4,6 +4,8 @@ import argparse
 import asyncio
 import signal
 import sys
+import httpx
+import re
 
 # Import from our modules - use direct imports from sub-modules for better patching in tests
 from awslabs.openapi_mcp_server import logger
@@ -14,6 +16,7 @@ from awslabs.openapi_mcp_server.utils.openapi import load_openapi_spec
 from awslabs.openapi_mcp_server.utils.openapi_validator import validate_openapi_spec
 from fastmcp import FastMCP
 from typing import Any, Dict
+from fastmcp.server.openapi import FastMCPOpenAPI, RouteMap, RouteType
 
 
 def create_mcp_server(config: Config) -> FastMCP:
@@ -26,6 +29,14 @@ def create_mcp_server(config: Config) -> FastMCP:
         FastMCP: The configured FastMCP server
 
     """
+    # Log environment information
+    logger.debug('Environment information:')
+    logger.debug(f'Python version: {sys.version}')
+    try:
+        logger.debug(f'HTTPX version: {httpx.__version__}')
+    except AttributeError:
+        logger.debug('HTTPX version: unknown')
+    
     logger.info('Creating FastMCP server')
 
     # Create the FastMCP server
@@ -145,20 +156,44 @@ def create_mcp_server(config: Config) -> FastMCP:
         )
         logger.info(f'Created HTTP client for API base URL: {config.api_base_url}')
 
-        # Apply patches to improve functionality
-        logger.info('Applying route mapping patch to handle query parameters')
-        import fastmcp.server.openapi
-        from awslabs.openapi_mcp_server.route_patch import apply_route_patch
+        custom_mappings = []
 
-        # Apply the route mapping patch with debug logging enabled
-        apply_route_patch(fastmcp.server.openapi, enable=True, debug=True)
+        # Identify GET operations with query parameters in the OpenAPI spec
+        for path, path_item in openapi_spec.get('paths', {}).items():
+            for method, operation in path_item.items():
+                if method.lower() == 'get':
+                    parameters = operation.get('parameters', [])
+                    query_params = [p for p in parameters if p.get('in') == 'query']
+                    if query_params:
+                        # Create a specific mapping for this path to ensure it's treated as a TOOL
+                        custom_mappings.append(
+                            RouteMap(
+                                methods=["GET"],
+                                pattern=f"^{re.escape(path)}$",
+                                route_type=RouteType.TOOL
+                            )
+                        )
 
-        # OpenAPI tool patch has been removed
-        logger.info('OpenAPI tool patch has been removed')
-
-        # Create a FastMCP server from the OpenAPI specification
-        logger.info('Creating FastMCP server with patched route mapping')
-        server = FastMCP.from_openapi(openapi_spec=openapi_spec, client=client)
+        # Create the FastMCP server with custom route mappings
+        logger.info('Creating FastMCP server with OpenAPI specification')
+        server = FastMCPOpenAPI(
+            openapi_spec=openapi_spec,
+            client=client,
+            name=config.api_name or "OpenAPI MCP Server",
+            route_maps=custom_mappings,  # Custom mappings take precedence over default mappings
+        )
+        
+        # Log route information at debug level
+        if logger.level == 'DEBUG' and hasattr(server, '_openapi_router') and hasattr(server._openapi_router, '_routes'):
+            routes = server._openapi_router._routes
+            logger.debug(f"Server has {len(routes)} routes")
+            
+            # Log details of each route
+            for i, route in enumerate(routes):
+                if hasattr(route, 'path') and hasattr(route, 'method'):
+                    route_type = getattr(route, 'route_type', 'unknown')
+                    logger.debug(f"Route {i}: {route.method} {route.path} - Type: {route_type}")
+            
         logger.info(f'Successfully configured API: {config.api_name}')
 
         # Update API name from OpenAPI spec title if available
@@ -258,8 +293,30 @@ def create_mcp_server(config: Config) -> FastMCP:
             tools = asyncio.run(server.list_tools())  # type: ignore
             tool_count = len(tools)
             tool_names = [tool.get('name') for tool in tools]
+            
+            # DEBUG - Log detailed information about each tool
+            logger.debug(f"Found {tool_count} tools via list_tools()")
+            for i, tool in enumerate(tools):
+                tool_name = tool.get('name', 'unknown')
+                tool_desc = tool.get('description', 'no description')
+                logger.debug(f"Tool {i}: {tool_name} - {tool_desc}")
+                
+                # Check if the tool has a schema
+                if 'parameters' in tool:
+                    params = tool.get('parameters', {})
+                    if 'properties' in params:
+                        properties = params.get('properties', {})
+                        logger.debug(f"  Parameters: {list(properties.keys())}")
         except Exception as e:
             logger.warning(f'Failed to list tools: {e}')
+            import traceback
+            logger.debug(f"Tool listing error traceback: {traceback.format_exc()}")
+            
+    # DEBUG - Try to access tools directly if available
+    if hasattr(server, '_tools'):
+        logger.debug(f"Server has {len(server._tools)} tools in _tools attribute")
+        for tool_name, tool in server._tools.items():
+            logger.debug(f"Direct tool: {tool_name}")
 
     # Log the prompt count
     prompt_count = (
@@ -324,7 +381,7 @@ def setup_signal_handlers():
 def main():
     """Run the MCP server with CLI argument support."""
     parser = argparse.ArgumentParser(
-        description='This project is a server that dynamically creates Machine Conversation Protocol (MCP) tools and resources from OpenAPI specifications. It allows Large Language Models (LLMs) to interact with APIs through the Machine Conversation Protocol.'
+        description='This project is a server that dynamically creates Model Context Protocol (MCP) tools and resources from OpenAPI specifications. It allows Large Language Models (LLMs) to interact with APIs through the Model Context Protocol.'
     )
     # Server configuration
     parser.add_argument('--sse', action='store_true', help='Use SSE transport')

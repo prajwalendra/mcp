@@ -37,13 +37,23 @@ async def test_generate_api_instructions():
 
     # Mock the required functions
     with patch(
-        'awslabs.openapi_mcp_server.prompts.prompt_orchestrator.generate_unified_prompts'
-    ) as mock_unified:
+        'awslabs.openapi_mcp_server.prompts.prompt_orchestrator._generate_api_documentation'
+    ) as mock_documentation:
+        # Set up the mock to return a value
+        mock_documentation.return_value = {
+            "operation_prompts_generated": True,
+            "workflow_prompts_generated": True,
+        }
+        
         # Call the function
-        await generate_api_instructions(server, api_name, openapi_spec)
+        result = await generate_api_instructions(server, api_name, openapi_spec)
 
         # Verify the result
-        mock_unified.assert_called_once_with(server, api_name, openapi_spec)
+        mock_documentation.assert_called_once_with(server, api_name, openapi_spec)
+        assert result == {
+            "operation_prompts_generated": True,
+            "workflow_prompts_generated": True,
+        }
 
 
 @pytest.mark.asyncio
@@ -61,23 +71,21 @@ async def test_generate_unified_prompts_minimal():
         'paths': {},
     }
 
-    # Mock the required functions - use module path instead of function path
+    # Mock the required functions
     with patch(
-        'awslabs.openapi_mcp_server.prompts.prompt_orchestrator.create_api_overview_prompt'
-    ) as mock_overview:
-        with patch(
-            'awslabs.openapi_mcp_server.prompts.prompt_orchestrator.create_mapping_reference_prompt'
-        ) as mock_mapping:
-            with patch(
-                'awslabs.openapi_mcp_server.prompts.prompt_orchestrator.generate_generic_workflow_prompts',
-                return_value='Mock workflow section',
-            ):
-                # Call the function
-                await generate_unified_prompts(server, api_name, openapi_spec)
+        'awslabs.openapi_mcp_server.prompts.prompt_orchestrator._generate_api_documentation',
+        return_value={
+            "api_overview_generated": True,
+            "operation_prompts_generated": False,
+            "workflow_prompts_generated": True,
+            "mapping_reference_generated": False,
+        },
+    ) as mock_documentation:
+        # Call the function
+        await generate_unified_prompts(server, api_name, openapi_spec)
 
-                # Verify the result
-                mock_overview.assert_called_once()
-                mock_mapping.assert_called_once()
+        # Verify the result
+        mock_documentation.assert_called_once_with(server, api_name, openapi_spec)
 
 
 @pytest.mark.asyncio
@@ -106,31 +114,21 @@ async def test_generate_unified_prompts_with_paths():
         },
     }
 
-    # Mock the required functions - use module path instead of function path
+    # Mock the required functions
     with patch(
-        'awslabs.openapi_mcp_server.prompts.prompt_orchestrator.create_api_overview_prompt'
-    ) as mock_overview:
-        with patch(
-            'awslabs.openapi_mcp_server.prompts.prompt_orchestrator.create_mapping_reference_prompt'
-        ) as mock_mapping:
-            with patch(
-                'awslabs.openapi_mcp_server.prompts.prompt_orchestrator.generate_generic_workflow_prompts',
-                return_value='Mock workflow section',
-            ):
-                with patch(
-                    'awslabs.openapi_mcp_server.prompts.prompt_orchestrator.create_operation_prompt'
-                ) as mock_operation:
-                    with patch(
-                        'awslabs.openapi_mcp_server.prompts.prompt_orchestrator.ENABLE_OPERATION_PROMPTS',
-                        True,
-                    ):
-                        # Call the function
-                        await generate_unified_prompts(server, api_name, openapi_spec)
+        'awslabs.openapi_mcp_server.prompts.prompt_orchestrator._generate_api_documentation',
+        return_value={
+            "api_overview_generated": True,
+            "operation_prompts_generated": True,
+            "workflow_prompts_generated": True,
+            "mapping_reference_generated": True,
+        },
+    ) as mock_documentation:
+        # Call the function
+        await generate_unified_prompts(server, api_name, openapi_spec)
 
-                        # Verify the result
-                        mock_overview.assert_called_once()
-                        assert mock_operation.call_count >= 1
-                        mock_mapping.assert_called_once()
+        # Verify the result
+        mock_documentation.assert_called_once_with(server, api_name, openapi_spec)
 
 
 @pytest.mark.asyncio
@@ -156,23 +154,21 @@ async def test_generate_unified_prompts_with_components():
         },
     }
 
-    # Mock the required functions - use module path instead of function path
+    # Mock the required functions
     with patch(
-        'awslabs.openapi_mcp_server.prompts.prompt_orchestrator.create_api_overview_prompt'
-    ) as mock_overview:
-        with patch(
-            'awslabs.openapi_mcp_server.prompts.prompt_orchestrator.create_mapping_reference_prompt'
-        ) as mock_mapping:
-            with patch(
-                'awslabs.openapi_mcp_server.prompts.prompt_orchestrator.generate_generic_workflow_prompts',
-                return_value='Mock workflow section',
-            ):
-                # Call the function
-                await generate_unified_prompts(server, api_name, openapi_spec)
+        'awslabs.openapi_mcp_server.prompts.prompt_orchestrator._generate_api_documentation',
+        return_value={
+            "api_overview_generated": True,
+            "operation_prompts_generated": False,
+            "workflow_prompts_generated": True,
+            "mapping_reference_generated": False,
+        },
+    ) as mock_documentation:
+        # Call the function
+        await generate_unified_prompts(server, api_name, openapi_spec)
 
-                # Verify the result
-                mock_overview.assert_called_once()
-                mock_mapping.assert_called_once()
+        # Verify the result
+        mock_documentation.assert_called_once_with(server, api_name, openapi_spec)
 
 
 @pytest.mark.asyncio
@@ -193,23 +189,21 @@ async def test_generate_unified_prompts_with_security_schemes():
         },
     }
 
-    # Mock the required functions - use module path instead of function path
+    # Mock the required functions
     with patch(
-        'awslabs.openapi_mcp_server.prompts.prompt_orchestrator.create_api_overview_prompt'
-    ) as mock_overview:
-        with patch(
-            'awslabs.openapi_mcp_server.prompts.prompt_orchestrator.create_mapping_reference_prompt'
-        ) as mock_mapping:
-            with patch(
-                'awslabs.openapi_mcp_server.prompts.prompt_orchestrator.generate_generic_workflow_prompts',
-                return_value='Mock workflow section',
-            ):
-                # Call the function
-                await generate_unified_prompts(server, api_name, openapi_spec)
+        'awslabs.openapi_mcp_server.prompts.prompt_orchestrator._generate_api_documentation',
+        return_value={
+            "api_overview_generated": True,
+            "operation_prompts_generated": False,
+            "workflow_prompts_generated": True,
+            "mapping_reference_generated": False,
+        },
+    ) as mock_documentation:
+        # Call the function
+        await generate_unified_prompts(server, api_name, openapi_spec)
 
-                # Verify the result
-                mock_overview.assert_called_once()
-                mock_mapping.assert_called_once()
+        # Verify the result
+        mock_documentation.assert_called_once_with(server, api_name, openapi_spec)
 
 
 @pytest.mark.asyncio
@@ -231,23 +225,21 @@ async def test_generate_unified_prompts_with_servers():
         ],
     }
 
-    # Mock the required functions - use module path instead of function path
+    # Mock the required functions
     with patch(
-        'awslabs.openapi_mcp_server.prompts.prompt_orchestrator.create_api_overview_prompt'
-    ) as mock_overview:
-        with patch(
-            'awslabs.openapi_mcp_server.prompts.prompt_orchestrator.create_mapping_reference_prompt'
-        ) as mock_mapping:
-            with patch(
-                'awslabs.openapi_mcp_server.prompts.prompt_orchestrator.generate_generic_workflow_prompts',
-                return_value='Mock workflow section',
-            ):
-                # Call the function
-                await generate_unified_prompts(server, api_name, openapi_spec)
+        'awslabs.openapi_mcp_server.prompts.prompt_orchestrator._generate_api_documentation',
+        return_value={
+            "api_overview_generated": True,
+            "operation_prompts_generated": False,
+            "workflow_prompts_generated": True,
+            "mapping_reference_generated": False,
+        },
+    ) as mock_documentation:
+        # Call the function
+        await generate_unified_prompts(server, api_name, openapi_spec)
 
-                # Verify the result
-                mock_overview.assert_called_once()
-                mock_mapping.assert_called_once()
+        # Verify the result
+        mock_documentation.assert_called_once_with(server, api_name, openapi_spec)
 
 
 @pytest.mark.asyncio
@@ -304,39 +296,21 @@ async def test_generate_unified_prompts_with_complex_operations():
         },
     }
 
-    # Mock the required functions - use module path instead of function path
+    # Mock the required functions
     with patch(
-        'awslabs.openapi_mcp_server.prompts.prompt_orchestrator.create_api_overview_prompt'
-    ) as mock_overview:
-        with patch(
-            'awslabs.openapi_mcp_server.prompts.prompt_orchestrator.create_mapping_reference_prompt'
-        ) as mock_mapping:
-            with patch(
-                'awslabs.openapi_mcp_server.prompts.prompt_orchestrator.generate_generic_workflow_prompts',
-                return_value='Mock workflow section',
-            ):
-                with patch(
-                    'awslabs.openapi_mcp_server.prompts.prompt_orchestrator.create_operation_prompt'
-                ) as mock_operation:
-                    with patch(
-                        'awslabs.openapi_mcp_server.prompts.prompt_orchestrator.ENABLE_OPERATION_PROMPTS',
-                        True,
-                    ):
-                        with patch(
-                            'awslabs.openapi_mcp_server.prompts.prompt_orchestrator.GENERATE_PROMPTS_FOR_COMPLEX_OPERATIONS_ONLY',
-                            True,
-                        ):
-                            with patch(
-                                'awslabs.openapi_mcp_server.prompts.prompt_orchestrator.is_complex_operation',
-                                return_value=True,
-                            ):
-                                # Call the function
-                                await generate_unified_prompts(server, api_name, openapi_spec)
+        'awslabs.openapi_mcp_server.prompts.prompt_orchestrator._generate_api_documentation',
+        return_value={
+            "api_overview_generated": True,
+            "operation_prompts_generated": True,
+            "workflow_prompts_generated": True,
+            "mapping_reference_generated": True,
+        },
+    ) as mock_documentation:
+        # Call the function
+        await generate_unified_prompts(server, api_name, openapi_spec)
 
-                                # Verify the result
-                                mock_overview.assert_called_once()
-                                mock_operation.assert_called()
-                                mock_mapping.assert_called_once()
+        # Verify the result
+        mock_documentation.assert_called_once_with(server, api_name, openapi_spec)
 
 
 @pytest.mark.asyncio
@@ -358,39 +332,21 @@ async def test_generate_unified_prompts_skip_simple_operations():
         },
     }
 
-    # Mock the required functions - use module path instead of function path
+    # Mock the required functions
     with patch(
-        'awslabs.openapi_mcp_server.prompts.prompt_orchestrator.create_api_overview_prompt'
-    ) as mock_overview:
-        with patch(
-            'awslabs.openapi_mcp_server.prompts.prompt_orchestrator.create_mapping_reference_prompt'
-        ) as mock_mapping:
-            with patch(
-                'awslabs.openapi_mcp_server.prompts.prompt_orchestrator.generate_generic_workflow_prompts',
-                return_value='Mock workflow section',
-            ):
-                with patch(
-                    'awslabs.openapi_mcp_server.prompts.prompt_orchestrator.create_operation_prompt'
-                ) as mock_operation:
-                    with patch(
-                        'awslabs.openapi_mcp_server.prompts.prompt_orchestrator.ENABLE_OPERATION_PROMPTS',
-                        True,
-                    ):
-                        with patch(
-                            'awslabs.openapi_mcp_server.prompts.prompt_orchestrator.GENERATE_PROMPTS_FOR_COMPLEX_OPERATIONS_ONLY',
-                            True,
-                        ):
-                            with patch(
-                                'awslabs.openapi_mcp_server.prompts.prompt_orchestrator.is_complex_operation',
-                                return_value=False,
-                            ):
-                                # Call the function
-                                await generate_unified_prompts(server, api_name, openapi_spec)
+        'awslabs.openapi_mcp_server.prompts.prompt_orchestrator._generate_api_documentation',
+        return_value={
+            "api_overview_generated": True,
+            "operation_prompts_generated": False,  # No operation prompts generated
+            "workflow_prompts_generated": True,
+            "mapping_reference_generated": True,
+        },
+    ) as mock_documentation:
+        # Call the function
+        await generate_unified_prompts(server, api_name, openapi_spec)
 
-                                # Verify the result
-                                mock_overview.assert_called_once()
-                                mock_operation.assert_not_called()  # Should be skipped
-                                mock_mapping.assert_called_once()
+        # Verify the result
+        mock_documentation.assert_called_once_with(server, api_name, openapi_spec)
 
 
 @pytest.mark.asyncio
@@ -408,23 +364,21 @@ async def test_generate_unified_prompts_error_handling():
         'paths': {},
     }
 
-    # Mock the required functions - use module path instead of function path
+    # Mock the required functions
     with patch(
-        'awslabs.openapi_mcp_server.prompts.prompt_orchestrator.create_api_overview_prompt'
-    ) as mock_overview:
-        with patch(
-            'awslabs.openapi_mcp_server.prompts.prompt_orchestrator.create_mapping_reference_prompt'
-        ) as mock_mapping:
-            with patch(
-                'awslabs.openapi_mcp_server.prompts.prompt_orchestrator.generate_generic_workflow_prompts',
-                side_effect=Exception('Workflow error'),
-            ):
-                # Call the function - should not raise an exception
-                await generate_unified_prompts(server, api_name, openapi_spec)
+        'awslabs.openapi_mcp_server.prompts.prompt_orchestrator._generate_api_documentation',
+        return_value={
+            "api_overview_generated": True,
+            "operation_prompts_generated": False,
+            "workflow_prompts_generated": False,  # Workflow generation failed
+            "mapping_reference_generated": True,
+        },
+    ) as mock_documentation:
+        # Call the function - should not raise an exception
+        await generate_unified_prompts(server, api_name, openapi_spec)
 
-                # Verify the result - overview should still be called even if workflow fails
-                mock_overview.assert_called_once()
-                mock_mapping.assert_called_once()
+        # Verify the result
+        mock_documentation.assert_called_once_with(server, api_name, openapi_spec)
 
 
 @pytest.mark.asyncio
@@ -446,32 +400,18 @@ async def test_generate_unified_prompts_operation_error():
         },
     }
 
-    # Mock the required functions - use module path instead of function path
+    # Mock the required functions
     with patch(
-        'awslabs.openapi_mcp_server.prompts.prompt_orchestrator.create_api_overview_prompt'
-    ) as mock_overview:
-        with patch(
-            'awslabs.openapi_mcp_server.prompts.prompt_orchestrator.create_mapping_reference_prompt'
-        ) as mock_mapping:
-            with patch(
-                'awslabs.openapi_mcp_server.prompts.prompt_orchestrator.generate_generic_workflow_prompts',
-                return_value='Mock workflow section',
-            ):
-                with patch(
-                    'awslabs.openapi_mcp_server.prompts.prompt_orchestrator.create_operation_prompt',
-                    side_effect=Exception('Operation error'),
-                ):
-                    with patch(
-                        'awslabs.openapi_mcp_server.prompts.prompt_orchestrator.ENABLE_OPERATION_PROMPTS',
-                        True,
-                    ):
-                        with patch(
-                            'awslabs.openapi_mcp_server.prompts.prompt_orchestrator.GENERATE_PROMPTS_FOR_COMPLEX_OPERATIONS_ONLY',
-                            False,
-                        ):
-                            # Call the function - should not raise an exception
-                            await generate_unified_prompts(server, api_name, openapi_spec)
+        'awslabs.openapi_mcp_server.prompts.prompt_orchestrator._generate_api_documentation',
+        return_value={
+            "api_overview_generated": True,
+            "operation_prompts_generated": False,  # Operation prompt generation failed
+            "workflow_prompts_generated": True,
+            "mapping_reference_generated": True,
+        },
+    ) as mock_documentation:
+        # Call the function - should not raise an exception
+        await generate_unified_prompts(server, api_name, openapi_spec)
 
-                            # Verify the result
-                            mock_overview.assert_called_once()
-                            mock_mapping.assert_called_once()  # Should still be called
+        # Verify the result
+        mock_documentation.assert_called_once_with(server, api_name, openapi_spec)

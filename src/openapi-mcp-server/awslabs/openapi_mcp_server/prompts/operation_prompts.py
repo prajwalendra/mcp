@@ -285,7 +285,7 @@ def create_operation_prompt(
     """Create and add an operation prompt to the server.
 
     Args:
-        server: The MCP server
+        server: The Model Context Protocol (MCP) server
         api_name: The name of the API
         operation_id: The operation ID
         mapping_type: The mapping type (function or resource)

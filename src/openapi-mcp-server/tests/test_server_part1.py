@@ -27,23 +27,22 @@ def mock_config():
     return config
 
 
+@patch('awslabs.openapi_mcp_server.server.FastMCPOpenAPI')
 @patch('awslabs.openapi_mcp_server.server.FastMCP')
 @patch('awslabs.openapi_mcp_server.server.load_openapi_spec')
 @patch('awslabs.openapi_mcp_server.server.validate_openapi_spec', return_value=True)
 @patch('awslabs.openapi_mcp_server.server.HttpClientFactory.create_client')
 def test_create_mcp_server_basic(
-    mock_create_client, mock_validate, mock_load_spec, mock_fastmcp, mock_config
+    mock_create_client, mock_validate, mock_load_spec, mock_fastmcp, mock_fastmcp_openapi, mock_config
 ):
     """Test creating an MCP server with basic configuration."""
     # Setup mocks
     mock_server = MagicMock()
-    mock_fastmcp.return_value = mock_server
-    mock_load_spec.return_value = {'openapi': '3.0.0', 'info': {'title': 'Test API'}, 'paths': {}}
+    mock_fastmcp.return_value = MagicMock()
+    mock_fastmcp_openapi.return_value = mock_server
+    mock_load_spec.return_value = {'openapi': '3.0.0', 'info': {'title': 'Test API', 'version': '1.0.0'}, 'paths': {}}
     mock_client = MagicMock()
     mock_create_client.return_value = mock_client
-
-    # Mock the FastMCP.from_openapi method
-    mock_fastmcp.from_openapi.return_value = mock_server
 
     # Call the function
     result = create_mcp_server(mock_config)
@@ -56,7 +55,7 @@ def test_create_mcp_server_basic(
     )
     mock_validate.assert_called_once()
     mock_create_client.assert_called_once()
-    mock_fastmcp.from_openapi.assert_called_once()
+    mock_fastmcp_openapi.assert_called_once()
 
 
 @patch('awslabs.openapi_mcp_server.server.FastMCP')
@@ -99,7 +98,7 @@ def test_create_mcp_server_missing_base_url(
     # Setup mocks
     mock_server = MagicMock()
     mock_fastmcp.return_value = mock_server
-    mock_load_spec.return_value = {'openapi': '3.0.0', 'info': {'title': 'Test API'}, 'paths': {}}
+    mock_load_spec.return_value = {'openapi': '3.0.0', 'info': {'title': 'Test API', 'version': '1.0.0'}, 'paths': {}}
 
     # Set base URL to None
     mock_config.api_base_url = None
@@ -117,26 +116,25 @@ def test_create_mcp_server_missing_base_url(
     mock_exit.assert_called_once_with(1)
 
 
+@patch('awslabs.openapi_mcp_server.server.FastMCPOpenAPI')
 @patch('awslabs.openapi_mcp_server.server.FastMCP')
 @patch('awslabs.openapi_mcp_server.server.load_openapi_spec')
 @patch('awslabs.openapi_mcp_server.server.validate_openapi_spec', return_value=False)
 @patch('awslabs.openapi_mcp_server.server.HttpClientFactory.create_client')
 def test_create_mcp_server_invalid_spec(
-    mock_create_client, mock_validate, mock_load_spec, mock_fastmcp, mock_config
+    mock_create_client, mock_validate, mock_load_spec, mock_fastmcp, mock_fastmcp_openapi, mock_config
 ):
     """Test creating an MCP server with an invalid OpenAPI spec."""
     # Setup mocks
     mock_server = MagicMock()
-    mock_fastmcp.return_value = mock_server
+    mock_fastmcp.return_value = MagicMock()
+    mock_fastmcp_openapi.return_value = mock_server
     mock_load_spec.return_value = {
-        'info': {'title': 'Test API'},
+        'info': {'title': 'Test API', 'version': '1.0.0'},
         'paths': {},
     }  # Missing openapi field
     mock_client = MagicMock()
     mock_create_client.return_value = mock_client
-
-    # Mock the FastMCP.from_openapi method
-    mock_fastmcp.from_openapi.return_value = mock_server
 
     # Call the function
     result = create_mcp_server(mock_config)
@@ -147,4 +145,4 @@ def test_create_mcp_server_invalid_spec(
     mock_load_spec.assert_called_once()
     mock_validate.assert_called_once()
     mock_create_client.assert_called_once()
-    mock_fastmcp.from_openapi.assert_called_once()
+    mock_fastmcp_openapi.assert_called_once()
