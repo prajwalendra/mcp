@@ -42,6 +42,17 @@ dependencies = [
     "pyyaml>=6.0.0",
 ]
 
+[dependency-groups]
+dev = [
+    "commitizen>=4.4.1",
+    "pre-commit>=4.2.0",
+    "pyright>=1.1.398",
+    "ruff>=0.11.2",
+    "pytest>=7.4.0",
+    "pytest-asyncio>=0.21.1",
+    "pytest-cov>=4.1.0",
+]
+
 [project.optional-dependencies]
 yaml = ["pyyaml>=6.0.0"]
 prometheus = ["prometheus-client>=0.17.0"]
