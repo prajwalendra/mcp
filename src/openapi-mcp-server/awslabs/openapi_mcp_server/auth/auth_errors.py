@@ -12,7 +12,7 @@ class AuthErrorType(Enum):
 
     MISSING_CREDENTIALS = 'missing_credentials'
     INVALID_CREDENTIALS = 'invalid_credentials'
-    EXPIRED_TOKEN = 'expired_token'
+    EXPIRED_TOKEN = 'expired_token'  # nosec B105
     INSUFFICIENT_PERMISSIONS = 'insufficient_permissions'
     CONFIGURATION_ERROR = 'configuration_error'
     NETWORK_ERROR = 'network_error'
