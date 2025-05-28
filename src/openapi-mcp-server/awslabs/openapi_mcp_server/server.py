@@ -2,10 +2,10 @@
 
 import argparse
 import asyncio
-import signal
-import sys
 import httpx
 import re
+import signal
+import sys
 
 # Import from our modules - use direct imports from sub-modules for better patching in tests
 from awslabs.openapi_mcp_server import logger
@@ -15,8 +15,8 @@ from awslabs.openapi_mcp_server.utils.metrics_provider import metrics
 from awslabs.openapi_mcp_server.utils.openapi import load_openapi_spec
 from awslabs.openapi_mcp_server.utils.openapi_validator import validate_openapi_spec
 from fastmcp import FastMCP
-from typing import Any, Dict
 from fastmcp.server.openapi import FastMCPOpenAPI, RouteMap, RouteType
+from typing import Any, Dict
 
 
 def create_mcp_server(config: Config) -> FastMCP:
@@ -36,7 +36,7 @@ def create_mcp_server(config: Config) -> FastMCP:
         logger.debug(f'HTTPX version: {httpx.__version__}')
     except AttributeError:
         logger.debug('HTTPX version: unknown')
-    
+
     logger.info('Creating FastMCP server')
 
     # Create the FastMCP server
@@ -168,9 +168,9 @@ def create_mcp_server(config: Config) -> FastMCP:
                         # Create a specific mapping for this path to ensure it's treated as a TOOL
                         custom_mappings.append(
                             RouteMap(
-                                methods=["GET"],
-                                pattern=f"^{re.escape(path)}$",
-                                route_type=RouteType.TOOL
+                                methods=['GET'],
+                                pattern=f'^{re.escape(path)}$',
+                                route_type=RouteType.TOOL,
                             )
                         )
 
@@ -179,21 +179,25 @@ def create_mcp_server(config: Config) -> FastMCP:
         server = FastMCPOpenAPI(
             openapi_spec=openapi_spec,
             client=client,
-            name=config.api_name or "OpenAPI MCP Server",
+            name=config.api_name or 'OpenAPI MCP Server',
             route_maps=custom_mappings,  # Custom mappings take precedence over default mappings
         )
-        
+
         # Log route information at debug level
-        if logger.level == 'DEBUG' and hasattr(server, '_openapi_router') and hasattr(server._openapi_router, '_routes'):
-            routes = server._openapi_router._routes
-            logger.debug(f"Server has {len(routes)} routes")
-            
-            # Log details of each route
-            for i, route in enumerate(routes):
-                if hasattr(route, 'path') and hasattr(route, 'method'):
+        if logger.level == 'DEBUG':
+            # Use getattr with default value to safely access attributes
+            openapi_router = getattr(server, '_openapi_router', None)
+            if openapi_router is not None:
+                routes = getattr(openapi_router, '_routes', [])
+                logger.debug(f'Server has {len(routes)} routes')
+
+                # Log details of each route
+                for i, route in enumerate(routes):
+                    path = getattr(route, 'path', 'unknown')
+                    method = getattr(route, 'method', 'unknown')
                     route_type = getattr(route, 'route_type', 'unknown')
-                    logger.debug(f"Route {i}: {route.method} {route.path} - Type: {route_type}")
-            
+                    logger.debug(f'Route {i}: {method} {path} - Type: {route_type}')
+
         logger.info(f'Successfully configured API: {config.api_name}')
 
         # Update API name from OpenAPI spec title if available
@@ -293,30 +297,32 @@ def create_mcp_server(config: Config) -> FastMCP:
             tools = asyncio.run(server.list_tools())  # type: ignore
             tool_count = len(tools)
             tool_names = [tool.get('name') for tool in tools]
-            
+
             # DEBUG - Log detailed information about each tool
-            logger.debug(f"Found {tool_count} tools via list_tools()")
+            logger.debug(f'Found {tool_count} tools via list_tools()')
             for i, tool in enumerate(tools):
                 tool_name = tool.get('name', 'unknown')
                 tool_desc = tool.get('description', 'no description')
-                logger.debug(f"Tool {i}: {tool_name} - {tool_desc}")
-                
+                logger.debug(f'Tool {i}: {tool_name} - {tool_desc}')
+
                 # Check if the tool has a schema
                 if 'parameters' in tool:
                     params = tool.get('parameters', {})
                     if 'properties' in params:
                         properties = params.get('properties', {})
-                        logger.debug(f"  Parameters: {list(properties.keys())}")
+                        logger.debug(f'  Parameters: {list(properties.keys())}')
         except Exception as e:
             logger.warning(f'Failed to list tools: {e}')
             import traceback
-            logger.debug(f"Tool listing error traceback: {traceback.format_exc()}")
-            
+
+            logger.debug(f'Tool listing error traceback: {traceback.format_exc()}')
+
     # DEBUG - Try to access tools directly if available
-    if hasattr(server, '_tools'):
-        logger.debug(f"Server has {len(server._tools)} tools in _tools attribute")
-        for tool_name, tool in server._tools.items():
-            logger.debug(f"Direct tool: {tool_name}")
+    tools = getattr(server, '_tools', {})
+    if tools:
+        logger.debug(f'Server has {len(tools)} tools in _tools attribute')
+        for tool_name, tool in tools.items():
+            logger.debug(f'Direct tool: {tool_name}')
 
     # Log the prompt count
     prompt_count = (
@@ -496,31 +502,8 @@ def main():
         logger.info(f'Running server with SSE transport on port {config.port}')
         mcp_server.settings.port = config.port
 
-        # Configure uvicorn settings for graceful shutdown
-        if hasattr(mcp_server, 'settings'):
-            try:
-                # Try to set uvicorn options directly if the attribute exists
-                if hasattr(mcp_server.settings, 'uvicorn_options'):
-                    mcp_server.settings.uvicorn_options['timeout_graceful_shutdown'] = 5.0
-                    mcp_server.settings.uvicorn_options['graceful_shutdown'] = True
-                    logger.info('Configured uvicorn for graceful shutdown')
-                else:
-                    # If the attribute doesn't exist, try to add it using different approaches
-                    try:
-                        # Approach 1: Try direct dictionary-style setting
-                        mcp_server.settings.uvicorn = {
-                            'timeout_graceful_shutdown': 5.0,
-                            'graceful_shutdown': True,
-                        }
-                        logger.info('Set uvicorn config via settings.uvicorn')
-                    except Exception:
-                        # Approach 2: Try to set the server's FastAPI app uvicorn config if available
-                        if hasattr(mcp_server, 'app'):
-                            logger.info('Setting uvicorn config via FastAPI app')
-                        else:
-                            logger.warning('Unable to set uvicorn options, will use defaults')
-            except Exception as e:
-                logger.warning(f'Failed to configure uvicorn options: {e}')
+        # Log that we're using default uvicorn settings
+        logger.info('Using default uvicorn settings for server')
 
         mcp_server.run(transport='sse')
     else:

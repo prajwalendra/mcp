@@ -40,16 +40,16 @@ async def test_generate_api_instructions():
     ) as mock_documentation:
         # Set up the mock to return a value
         mock_documentation.return_value = {
-            "operation_prompts_generated": True,
-            "workflow_prompts_generated": True,
+            'operation_prompts_generated': True,
+            'workflow_prompts_generated': True,
         }
-        
+
         # Call the function
         result = await generate_api_instructions(server, api_name, openapi_spec)
 
         # Verify the result
         mock_documentation.assert_called_once_with(server, api_name, openapi_spec)
         assert result == {
-            "operation_prompts_generated": True,
-            "workflow_prompts_generated": True,
+            'operation_prompts_generated': True,
+            'workflow_prompts_generated': True,
         }

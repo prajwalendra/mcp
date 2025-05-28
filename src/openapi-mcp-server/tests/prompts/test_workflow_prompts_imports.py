@@ -1,7 +1,6 @@
 """Tests for the workflow_prompts module imports."""
 
 import unittest
-from unittest.mock import patch
 
 
 class TestWorkflowPromptsImports(unittest.TestCase):
@@ -20,8 +19,7 @@ class TestWorkflowPromptsImports(unittest.TestCase):
     def test_imported_functions(self):
         """Test that the imported functions are the same as the original functions."""
         # Import both modules
-        from awslabs.openapi_mcp_server.prompts import workflow_prompts
-        from awslabs.openapi_mcp_server.prompts import api_documentation_workflow
+        from awslabs.openapi_mcp_server.prompts import api_documentation_workflow, workflow_prompts
 
         # Verify that the imported functions are the same as the original functions
         self.assertIs(

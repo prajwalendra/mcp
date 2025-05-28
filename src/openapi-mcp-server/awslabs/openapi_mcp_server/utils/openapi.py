@@ -11,6 +11,13 @@ from pathlib import Path
 from typing import Any, Dict
 
 
+# Import yaml conditionally to avoid errors if it's not installed
+try:
+    import yaml
+except ImportError:
+    yaml = None  # type: Optional[Any]
+
+
 # Try to import prance, but don't fail if it's not installed
 try:
     from prance import ResolvingParser

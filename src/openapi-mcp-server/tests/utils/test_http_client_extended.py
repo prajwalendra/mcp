@@ -2,20 +2,17 @@
 
 import httpx
 import pytest
-import asyncio
-from unittest.mock import AsyncMock, MagicMock, patch, PropertyMock
 from awslabs.openapi_mcp_server.utils.http_client import (
     HttpClientFactory,
-    make_request,
     make_request_with_retry,
-    TENACITY_AVAILABLE,
 )
+from unittest.mock import AsyncMock, MagicMock, patch
 
 
 class MockCognitoAuth(httpx.Auth):
     """Mock Cognito auth for testing."""
 
-    def __init__(self, token="mock_token"):
+    def __init__(self, token='mock_token'):
         """Initialize with a mock token."""
         self.token = token
         self.session_manager = MagicMock()
@@ -24,7 +21,7 @@ class MockCognitoAuth(httpx.Auth):
 
     def auth_flow(self, request):
         """Auth flow required by httpx.Auth."""
-        request.headers["Authorization"] = f"Bearer {self.token}"
+        request.headers['Authorization'] = f'Bearer {self.token}'
         yield request
 
 
@@ -32,8 +29,8 @@ class MockCognitoAuth(httpx.Auth):
 async def test_http_client_factory_with_cognito_auth():
     """Test creating an HTTP client with Cognito auth."""
     # Create a mock Cognito auth
-    auth = MockCognitoAuth(token="test_token_12345")
-    
+    auth = MockCognitoAuth(token='test_token_12345')
+
     # Test with Cognito auth
     client = HttpClientFactory.create_client('https://example.com', auth=auth)
     assert isinstance(client, httpx.AsyncClient)
@@ -45,8 +42,8 @@ async def test_http_client_factory_with_cognito_auth():
 async def test_http_client_factory_with_auth_and_headers():
     """Test creating an HTTP client with auth and headers."""
     # Create a mock Cognito auth
-    auth = MockCognitoAuth(token="test_token_12345")
-    
+    auth = MockCognitoAuth(token='test_token_12345')
+
     # Test with auth and headers
     headers = {'X-Custom': 'custom_value'}
     client = HttpClientFactory.create_client('https://example.com', auth=auth, headers=headers)
@@ -63,7 +60,7 @@ async def test_http_client_factory_with_auth_no_token():
     # Create a mock auth with no token
     auth = MockCognitoAuth()
     auth.session_manager.get_access_token = MagicMock(return_value=None)
-    
+
     # Test with auth but no token
     client = HttpClientFactory.create_client('https://example.com', auth=auth)
     assert isinstance(client, httpx.AsyncClient)
@@ -75,15 +72,17 @@ async def test_http_client_factory_with_auth_no_token():
 async def test_http_client_factory_with_auth_and_existing_auth_header():
     """Test creating an HTTP client with auth and existing Authorization header."""
     # Create a mock Cognito auth
-    auth = MockCognitoAuth(token="test_token_12345")
-    
+    auth = MockCognitoAuth(token='test_token_12345')
+
     # Test with auth and existing Authorization header
     headers = {'Authorization': 'Bearer existing_token'}
     client = HttpClientFactory.create_client('https://example.com', auth=auth, headers=headers)
     assert isinstance(client, httpx.AsyncClient)
     assert client._auth == auth
     assert 'Authorization' in client._headers
-    assert client._headers['Authorization'] == 'Bearer existing_token'  # Header should not be overwritten
+    assert (
+        client._headers['Authorization'] == 'Bearer existing_token'
+    )  # Header should not be overwritten
     await client.aclose()
 
 
@@ -92,14 +91,12 @@ async def test_http_client_factory_with_custom_limits():
     """Test creating an HTTP client with custom connection limits."""
     # Simply verify the client is created successfully with custom limits
     client = HttpClientFactory.create_client(
-        'https://example.com',
-        max_connections=50,
-        max_keepalive=25
+        'https://example.com', max_connections=50, max_keepalive=25
     )
-    
+
     # Verify client was created
     assert isinstance(client, httpx.AsyncClient)
-    
+
     # Close the client
     await client.aclose()
 
@@ -139,7 +136,7 @@ async def test_make_request_with_retry_http_status_error():
     mock_response = MagicMock()
     mock_response.status_code = 404
     mock_response.raise_for_status.side_effect = httpx.HTTPStatusError(
-        "404 Not Found", request=MagicMock(), response=mock_response
+        '404 Not Found', request=MagicMock(), response=mock_response
     )
 
     # Set up the mock to fail with an HTTP status error
@@ -220,8 +217,10 @@ async def test_tenacity_retry_if_available():
         with patch('awslabs.openapi_mcp_server.utils.http_client.TENACITY_AVAILABLE', True):
             with patch('awslabs.openapi_mcp_server.utils.http_client.tenacity', mock_tenacity):
                 # Mock api_call_timer decorator to return our async function
-                with patch('awslabs.openapi_mcp_server.utils.http_client.api_call_timer', 
-                          lambda f: mock_make_request):
+                with patch(
+                    'awslabs.openapi_mcp_server.utils.http_client.api_call_timer',
+                    lambda f: mock_make_request,
+                ):
                     response = await make_request_with_retry(mock_client, 'GET', '/test')
 
                     # Verify the response

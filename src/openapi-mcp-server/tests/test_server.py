@@ -33,14 +33,23 @@ def mock_config():
 @patch('awslabs.openapi_mcp_server.server.validate_openapi_spec', return_value=True)
 @patch('awslabs.openapi_mcp_server.server.HttpClientFactory.create_client')
 def test_create_mcp_server_basic(
-    mock_create_client, mock_validate, mock_load_spec, mock_fastmcp, mock_fastmcp_openapi, mock_config
+    mock_create_client,
+    mock_validate,
+    mock_load_spec,
+    mock_fastmcp,
+    mock_fastmcp_openapi,
+    mock_config,
 ):
     """Test creating an MCP server with basic configuration."""
     # Setup mocks
     mock_server = MagicMock()
     mock_fastmcp.return_value = MagicMock()
     mock_fastmcp_openapi.return_value = mock_server
-    mock_load_spec.return_value = {'openapi': '3.0.0', 'info': {'title': 'Test API', 'version': '1.0.0'}, 'paths': {}}
+    mock_load_spec.return_value = {
+        'openapi': '3.0.0',
+        'info': {'title': 'Test API', 'version': '1.0.0'},
+        'paths': {},
+    }
     mock_client = MagicMock()
     mock_create_client.return_value = mock_client
 
@@ -98,7 +107,11 @@ def test_create_mcp_server_missing_base_url(
     # Setup mocks
     mock_server = MagicMock()
     mock_fastmcp.return_value = mock_server
-    mock_load_spec.return_value = {'openapi': '3.0.0', 'info': {'title': 'Test API', 'version': '1.0.0'}, 'paths': {}}
+    mock_load_spec.return_value = {
+        'openapi': '3.0.0',
+        'info': {'title': 'Test API', 'version': '1.0.0'},
+        'paths': {},
+    }
 
     # Set base URL to None
     mock_config.api_base_url = None
@@ -122,7 +135,12 @@ def test_create_mcp_server_missing_base_url(
 @patch('awslabs.openapi_mcp_server.server.validate_openapi_spec', return_value=False)
 @patch('awslabs.openapi_mcp_server.server.HttpClientFactory.create_client')
 def test_create_mcp_server_invalid_spec(
-    mock_create_client, mock_validate, mock_load_spec, mock_fastmcp, mock_fastmcp_openapi, mock_config
+    mock_create_client,
+    mock_validate,
+    mock_load_spec,
+    mock_fastmcp,
+    mock_fastmcp_openapi,
+    mock_config,
 ):
     """Test creating an MCP server with an invalid OpenAPI spec."""
     # Setup mocks

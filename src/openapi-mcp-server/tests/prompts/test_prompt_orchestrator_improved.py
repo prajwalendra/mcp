@@ -41,18 +41,18 @@ async def test_generate_api_instructions():
     ) as mock_documentation:
         # Set up the mock to return a value
         mock_documentation.return_value = {
-            "operation_prompts_generated": True,
-            "workflow_prompts_generated": True,
+            'operation_prompts_generated': True,
+            'workflow_prompts_generated': True,
         }
-        
+
         # Call the function
         result = await generate_api_instructions(server, api_name, openapi_spec)
 
         # Verify the result
         mock_documentation.assert_called_once_with(server, api_name, openapi_spec)
         assert result == {
-            "operation_prompts_generated": True,
-            "workflow_prompts_generated": True,
+            'operation_prompts_generated': True,
+            'workflow_prompts_generated': True,
         }
 
 
@@ -75,10 +75,10 @@ async def test_generate_unified_prompts_minimal():
     with patch(
         'awslabs.openapi_mcp_server.prompts.prompt_orchestrator._generate_api_documentation',
         return_value={
-            "api_overview_generated": True,
-            "operation_prompts_generated": False,
-            "workflow_prompts_generated": True,
-            "mapping_reference_generated": False,
+            'api_overview_generated': True,
+            'operation_prompts_generated': False,
+            'workflow_prompts_generated': True,
+            'mapping_reference_generated': False,
         },
     ) as mock_documentation:
         # Call the function
@@ -118,10 +118,10 @@ async def test_generate_unified_prompts_with_paths():
     with patch(
         'awslabs.openapi_mcp_server.prompts.prompt_orchestrator._generate_api_documentation',
         return_value={
-            "api_overview_generated": True,
-            "operation_prompts_generated": True,
-            "workflow_prompts_generated": True,
-            "mapping_reference_generated": True,
+            'api_overview_generated': True,
+            'operation_prompts_generated': True,
+            'workflow_prompts_generated': True,
+            'mapping_reference_generated': True,
         },
     ) as mock_documentation:
         # Call the function
@@ -158,10 +158,10 @@ async def test_generate_unified_prompts_with_components():
     with patch(
         'awslabs.openapi_mcp_server.prompts.prompt_orchestrator._generate_api_documentation',
         return_value={
-            "api_overview_generated": True,
-            "operation_prompts_generated": False,
-            "workflow_prompts_generated": True,
-            "mapping_reference_generated": False,
+            'api_overview_generated': True,
+            'operation_prompts_generated': False,
+            'workflow_prompts_generated': True,
+            'mapping_reference_generated': False,
         },
     ) as mock_documentation:
         # Call the function
@@ -193,10 +193,10 @@ async def test_generate_unified_prompts_with_security_schemes():
     with patch(
         'awslabs.openapi_mcp_server.prompts.prompt_orchestrator._generate_api_documentation',
         return_value={
-            "api_overview_generated": True,
-            "operation_prompts_generated": False,
-            "workflow_prompts_generated": True,
-            "mapping_reference_generated": False,
+            'api_overview_generated': True,
+            'operation_prompts_generated': False,
+            'workflow_prompts_generated': True,
+            'mapping_reference_generated': False,
         },
     ) as mock_documentation:
         # Call the function
@@ -229,10 +229,10 @@ async def test_generate_unified_prompts_with_servers():
     with patch(
         'awslabs.openapi_mcp_server.prompts.prompt_orchestrator._generate_api_documentation',
         return_value={
-            "api_overview_generated": True,
-            "operation_prompts_generated": False,
-            "workflow_prompts_generated": True,
-            "mapping_reference_generated": False,
+            'api_overview_generated': True,
+            'operation_prompts_generated': False,
+            'workflow_prompts_generated': True,
+            'mapping_reference_generated': False,
         },
     ) as mock_documentation:
         # Call the function
@@ -300,10 +300,10 @@ async def test_generate_unified_prompts_with_complex_operations():
     with patch(
         'awslabs.openapi_mcp_server.prompts.prompt_orchestrator._generate_api_documentation',
         return_value={
-            "api_overview_generated": True,
-            "operation_prompts_generated": True,
-            "workflow_prompts_generated": True,
-            "mapping_reference_generated": True,
+            'api_overview_generated': True,
+            'operation_prompts_generated': True,
+            'workflow_prompts_generated': True,
+            'mapping_reference_generated': True,
         },
     ) as mock_documentation:
         # Call the function
@@ -336,10 +336,10 @@ async def test_generate_unified_prompts_skip_simple_operations():
     with patch(
         'awslabs.openapi_mcp_server.prompts.prompt_orchestrator._generate_api_documentation',
         return_value={
-            "api_overview_generated": True,
-            "operation_prompts_generated": False,  # No operation prompts generated
-            "workflow_prompts_generated": True,
-            "mapping_reference_generated": True,
+            'api_overview_generated': True,
+            'operation_prompts_generated': False,  # No operation prompts generated
+            'workflow_prompts_generated': True,
+            'mapping_reference_generated': True,
         },
     ) as mock_documentation:
         # Call the function
@@ -368,10 +368,10 @@ async def test_generate_unified_prompts_error_handling():
     with patch(
         'awslabs.openapi_mcp_server.prompts.prompt_orchestrator._generate_api_documentation',
         return_value={
-            "api_overview_generated": True,
-            "operation_prompts_generated": False,
-            "workflow_prompts_generated": False,  # Workflow generation failed
-            "mapping_reference_generated": True,
+            'api_overview_generated': True,
+            'operation_prompts_generated': False,
+            'workflow_prompts_generated': False,  # Workflow generation failed
+            'mapping_reference_generated': True,
         },
     ) as mock_documentation:
         # Call the function - should not raise an exception
@@ -404,10 +404,10 @@ async def test_generate_unified_prompts_operation_error():
     with patch(
         'awslabs.openapi_mcp_server.prompts.prompt_orchestrator._generate_api_documentation',
         return_value={
-            "api_overview_generated": True,
-            "operation_prompts_generated": False,  # Operation prompt generation failed
-            "workflow_prompts_generated": True,
-            "mapping_reference_generated": True,
+            'api_overview_generated': True,
+            'operation_prompts_generated': False,  # Operation prompt generation failed
+            'workflow_prompts_generated': True,
+            'mapping_reference_generated': True,
         },
     ) as mock_documentation:
         # Call the function - should not raise an exception

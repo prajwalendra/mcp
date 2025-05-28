@@ -1,7 +1,6 @@
 """Tests for the optimized prompt generation modules."""
 
 import unittest
-from unittest.mock import AsyncMock, MagicMock, patch
 
 # Import the modules for testing
 from awslabs.openapi_mcp_server.prompts.api_documentation_operation import (
@@ -30,47 +29,47 @@ class TestPromptOptimization(unittest.TestCase):
     def test_operation_prompt_efficiency(self):
         """Test that operation prompts are efficient."""
         # Test data
-        api_name = "test-api"
-        operation_id = "getItem"
-        mapping_type = "function"
-        method = "get"
-        path = "/items/{itemId}"
-        summary = "Get an item by ID"
-        description = "Returns a single item by its unique identifier"
+        api_name = 'test-api'
+        operation_id = 'getItem'
+        mapping_type = 'function'
+        method = 'get'
+        path = '/items/{itemId}'
+        summary = 'Get an item by ID'
+        description = 'Returns a single item by its unique identifier'
         parameters = [
             {
-                "name": "itemId",
-                "in": "path",
-                "required": True,
-                "schema": {"type": "string"},
-                "description": "Unique identifier of the item",
+                'name': 'itemId',
+                'in': 'path',
+                'required': True,
+                'schema': {'type': 'string'},
+                'description': 'Unique identifier of the item',
             }
         ]
         request_body = None
         responses = {
-            "200": {
-                "description": "Successful operation",
-                "content": {
-                    "application/json": {
-                        "schema": {
-                            "type": "object",
-                            "properties": {
-                                "id": {"type": "string"},
-                                "name": {"type": "string"},
-                                "description": {"type": "string"},
-                                "created": {"type": "string", "format": "date-time"},
-                                "status": {
-                                    "type": "string",
-                                    "enum": ["active", "inactive", "pending"],
+            '200': {
+                'description': 'Successful operation',
+                'content': {
+                    'application/json': {
+                        'schema': {
+                            'type': 'object',
+                            'properties': {
+                                'id': {'type': 'string'},
+                                'name': {'type': 'string'},
+                                'description': {'type': 'string'},
+                                'created': {'type': 'string', 'format': 'date-time'},
+                                'status': {
+                                    'type': 'string',
+                                    'enum': ['active', 'inactive', 'pending'],
                                 },
                             },
                         }
                     }
                 },
             },
-            "404": {"description": "Item not found"},
+            '404': {'description': 'Item not found'},
         }
-        security = [{"apiKey": []}]
+        security = [{'apiKey': []}]
 
         # Generate prompt
         prompt = generate_operation_prompt(
@@ -91,47 +90,45 @@ class TestPromptOptimization(unittest.TestCase):
         self.assertIn(operation_id, prompt)
         self.assertIn(method.upper(), prompt)
         self.assertIn(path, prompt)
-        self.assertIn("itemId", prompt)
-        self.assertIn("200", prompt)
-        self.assertIn("404", prompt)
-        self.assertIn("apiKey", prompt)
-        
+        self.assertIn('itemId', prompt)
+        self.assertIn('200', prompt)
+        self.assertIn('404', prompt)
+        self.assertIn('apiKey', prompt)
+
         # Verify the prompt includes example usage
-        self.assertIn("Example usage", prompt)
-        self.assertIn("```python", prompt)
-        
+        self.assertIn('Example usage', prompt)
+        self.assertIn('```python', prompt)
+
         # Verify token efficiency (rough estimate)
         tokens = len(prompt) / 4
-        print(f"Operation prompt tokens: {tokens}")
-        self.assertLess(tokens, 400, "Operation prompt should be under 400 tokens")
+        print(f'Operation prompt tokens: {tokens}')
+        self.assertLess(tokens, 400, 'Operation prompt should be under 400 tokens')
 
     def test_workflow_prompt_efficiency(self):
         """Test that workflow prompts are efficient."""
         # Test data
-        resource_type = "User"
-        list_op = {"operationId": "listUsers"}
-        get_op = {"operationId": "getUser"}
-        update_op = {"operationId": "updateUser"}
+        resource_type = 'User'
+        list_op = {'operationId': 'listUsers'}
+        get_op = {'operationId': 'getUser'}
+        update_op = {'operationId': 'updateUser'}
 
         # Generate workflow prompt
-        workflow = _generate_list_get_update_workflow(
-            resource_type, list_op, get_op, update_op
-        )
+        workflow = _generate_list_get_update_workflow(resource_type, list_op, get_op, update_op)
 
         # Verify essential information is present
         self.assertIn(resource_type, workflow)
-        self.assertIn("listUsers", workflow)
-        self.assertIn("getUser", workflow)
-        self.assertIn("updateUser", workflow)
-        self.assertIn("```python", workflow)
-        
+        self.assertIn('listUsers', workflow)
+        self.assertIn('getUser', workflow)
+        self.assertIn('updateUser', workflow)
+        self.assertIn('```python', workflow)
+
         # Verify token efficiency (rough estimate)
         tokens = len(workflow) / 4
-        print(f"Workflow prompt tokens: {tokens}")
-        self.assertLess(tokens, 200, "Workflow prompt should be under 200 tokens")
-        
+        print(f'Workflow prompt tokens: {tokens}')
+        self.assertLess(tokens, 200, 'Workflow prompt should be under 200 tokens')
+
     # Example prompt test removed as it's no longer needed
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     unittest.main()

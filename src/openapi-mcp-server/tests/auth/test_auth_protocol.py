@@ -1,20 +1,18 @@
 """Tests for the auth protocol module."""
 
-import unittest
 import httpx
-from unittest.mock import MagicMock
-
+import unittest
 from awslabs.openapi_mcp_server.api.config import Config
 from awslabs.openapi_mcp_server.auth.auth_protocol import (
     AuthProviderProtocol,
-    AuthProviderFactory,
 )
+from unittest.mock import MagicMock
 
 
 class MockAuthProvider:
     """Mock implementation of AuthProviderProtocol for testing."""
 
-    def __init__(self, name="mock_provider"):
+    def __init__(self, name='mock_provider'):
         """Initialize the mock auth provider."""
         self._name = name
 
@@ -29,15 +27,15 @@ class MockAuthProvider:
 
     def get_auth_headers(self) -> dict[str, str]:
         """Get authentication headers for HTTP requests."""
-        return {"Authorization": "Bearer mock-token"}
+        return {'Authorization': 'Bearer mock-token'}
 
     def get_auth_params(self) -> dict[str, str]:
         """Get authentication query parameters for HTTP requests."""
-        return {"api_key": "mock-api-key"}
+        return {'api_key': 'mock-api-key'}
 
     def get_auth_cookies(self) -> dict[str, str]:
         """Get authentication cookies for HTTP requests."""
-        return {"session": "mock-session-id"}
+        return {'session': 'mock-session-id'}
 
     def get_httpx_auth(self) -> httpx.Auth:
         """Get authentication object for HTTPX."""
@@ -56,25 +54,25 @@ class TestAuthProtocol(unittest.TestCase):
         """Test that MockAuthProvider implements AuthProviderProtocol."""
         provider = MockAuthProvider()
         self.assertIsInstance(provider, AuthProviderProtocol)
-        
+
         # Test all protocol methods
-        self.assertEqual(provider.provider_name, "mock_provider")
+        self.assertEqual(provider.provider_name, 'mock_provider')
         self.assertTrue(provider.is_configured())
-        self.assertEqual(provider.get_auth_headers(), {"Authorization": "Bearer mock-token"})
-        self.assertEqual(provider.get_auth_params(), {"api_key": "mock-api-key"})
-        self.assertEqual(provider.get_auth_cookies(), {"session": "mock-session-id"})
+        self.assertEqual(provider.get_auth_headers(), {'Authorization': 'Bearer mock-token'})
+        self.assertEqual(provider.get_auth_params(), {'api_key': 'mock-api-key'})
+        self.assertEqual(provider.get_auth_cookies(), {'session': 'mock-session-id'})
         self.assertIsNone(provider.get_httpx_auth())
 
     def test_auth_provider_factory(self):
         """Test that mock_factory implements AuthProviderFactory."""
         # Create a mock config
         config = MagicMock(spec=Config)
-        
+
         # Verify the factory function works
         provider = mock_factory(config)
         self.assertIsInstance(provider, AuthProviderProtocol)
-        self.assertEqual(provider.provider_name, "mock_provider")
+        self.assertEqual(provider.provider_name, 'mock_provider')
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     unittest.main()
