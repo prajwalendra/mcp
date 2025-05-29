@@ -1,5 +1,6 @@
 """Operation prompt generation for OpenAPI specifications."""
 
+import inspect
 from awslabs.openapi_mcp_server import logger
 from awslabs.openapi_mcp_server.prompts.models import (
     PromptArgument,
@@ -479,84 +480,104 @@ def create_operation_prompt(
 
         # Create a function that returns messages for this operation
         # We need to create a function with the exact parameters we want to expose
-        # Define the function dynamically with the parameters we want
-        required_params = []
-        optional_params = []
-        used_param_names = set()
+        # Instead of using exec(), we'll use a function factory approach
 
-        for arg in prompt_arguments:
-            # Ensure parameter names are unique
-            param_name = arg.name
-            if param_name in used_param_names:
-                # If the parameter name is already used, add a suffix
-                suffix = 1
-                while f'{param_name}_{suffix}' in used_param_names:
-                    suffix += 1
-                param_name = f'{param_name}_{suffix}'
+        # Create a generic handler that will be wrapped with the correct signature
+        def generic_handler(doc, op_type, api_name_val, path_val, resp, args, *args_values):
+            """Handle operation prompts generically."""
+            # Create a dictionary of parameter values
+            param_values = {}
+            for i, arg in enumerate(args):
+                if i < len(args_values):
+                    param_values[arg.name] = args_values[i]
 
-            used_param_names.add(param_name)
+            # Create messages
+            messages = [{'role': 'user', 'content': {'type': 'text', 'text': doc}}]
 
-            # Separate required and optional parameters
-            if arg.required:
-                required_params.append(f'{param_name}: str')
-            else:
-                optional_params.append(f'{param_name}: str = None')
+            # For resources, add resource reference
+            if op_type in ['resource', 'resource_template']:
+                # Determine MIME type
+                mime_type = determine_mime_type(resp)
 
-        # Combine parameters, with required parameters first
-        fn_params = required_params + optional_params
+                # Create resource URI
+                resource_uri = f'api://{api_name_val}{path_val}'
 
-        # Create the function body
-        fn_body = f"""
-def operation_fn({', '.join(fn_params)}) -> List[Dict[str, Any]]:
-    # Create messages
-    messages = [
-        {{
-            "role": "user",
-            "content": {{
-                "type": "text",
-                "text": documentation
-            }}
-        }}
-    ]
-"""
+                # Add resource reference message
+                messages.append(
+                    {
+                        'role': 'user',
+                        'content': {
+                            'type': 'resource',
+                            'resource': {'uri': resource_uri, 'mimeType': mime_type},
+                        },
+                    }
+                )
 
-        # For resources, add resource reference
-        if operation_type in ['resource', 'resource_template']:
-            # Determine MIME type
-            mime_type = determine_mime_type(responses)
+            logger.debug(f'Operation {operation_id} returning {len(messages)} messages')
+            return messages
 
-            # Create resource URI
-            resource_uri = f'api://{api_name}{path}'
+        # Create a function with the correct signature using functools.partial
+        from functools import partial
 
-            # Add resource reference message to function body
-            fn_body += f"""
-    # Add resource reference
-    messages.append({{
-        "role": "user",
-        "content": {{
-            "type": "resource",
-            "resource": {{
-                "uri": "{resource_uri}",
-                "mimeType": "{mime_type}"
-            }}
-        }}
-    }})
-"""
+        # Create a partial function with the fixed arguments
+        handler_with_fixed_args = partial(
+            generic_handler,
+            documentation,
+            operation_type,
+            api_name,
+            path,
+            responses,
+            prompt_arguments,
+        )
 
-        # Return messages
-        fn_body += """
-    return messages
-"""
+        # Define a function to create the appropriate operation function using inspect.Signature
+        def create_operation_function():
+            # Create a base function that will be wrapped with the correct signature
+            def base_fn(*args, **kwargs):
+                # Map positional args to their parameter names
+                param_names = [p.name for p in inspect.signature(base_fn).parameters.values()]
+                named_args = dict(zip(param_names, args))
+                named_args.update(kwargs)
 
-        # Create the function namespace
-        fn_namespace = {'List': List, 'Dict': Dict, 'Any': Any, 'documentation': documentation}
+                # Extract the values in the correct order for handler_with_fixed_args
+                arg_values = []
+                for arg in prompt_arguments:
+                    arg_values.append(named_args.get(arg.name))
 
-        # Execute the function definition
-        # nosemgrep: python.lang.security.audit.exec-detected - Safe usage: fn_body is locally generated and not influenced by external input
-        exec(fn_body, fn_namespace)
+                return handler_with_fixed_args(*arg_values)
 
-        # Get the function from the namespace
-        operation_fn = fn_namespace['operation_fn']
+            # Create parameters for the signature
+            # Sort arguments so required parameters come first, followed by optional parameters
+            required_args = [arg for arg in prompt_arguments if arg.required]
+            optional_args = [arg for arg in prompt_arguments if not arg.required]
+
+            # Create parameters list with required parameters first
+            parameters = []
+
+            # Add required parameters (no default value)
+            for arg in required_args:
+                param = inspect.Parameter(arg.name, inspect.Parameter.POSITIONAL_OR_KEYWORD)
+                parameters.append(param)
+
+            # Add optional parameters (with default=None)
+            for arg in optional_args:
+                param = inspect.Parameter(
+                    arg.name, inspect.Parameter.POSITIONAL_OR_KEYWORD, default=None
+                )
+                parameters.append(param)
+
+            # Create a new signature
+            sig = inspect.Signature(parameters, return_annotation=List[Dict[str, Any]])
+
+            # Apply the signature to the function
+            base_fn.__signature__ = sig
+            base_fn.__name__ = 'operation_fn'
+            base_fn.__doc__ = documentation
+
+            return base_fn
+
+        # Create the operation function
+        operation_fn = create_operation_function()
 
         # Register the function as a prompt
         if hasattr(server, '_prompt_manager'):
@@ -575,6 +596,7 @@ def operation_fn({', '.join(fn_params)}) -> List[Dict[str, Any]]:
             # Create a list of FastMCPPromptArgument objects for the Prompt
             prompt_args = []
             for arg in prompt_arguments:
+                # Use the actual parameter name from the OpenAPI schema
                 prompt_args.append(
                     FastMCPPromptArgument(
                         name=arg.name, description=arg.description, required=arg.required
@@ -594,7 +616,9 @@ def operation_fn({', '.join(fn_params)}) -> List[Dict[str, Any]]:
 
             # Add the prompt to the server
             server._prompt_manager.add_prompt(prompt)
-            logger.debug(f'Added operation prompt: {operation_id}')
+            logger.debug(
+                f'Added operation prompt: {operation_id} with arguments: {[arg.name for arg in prompt.arguments]}'
+            )
             return True
         else:
             logger.warning('Server does not have _prompt_manager')
