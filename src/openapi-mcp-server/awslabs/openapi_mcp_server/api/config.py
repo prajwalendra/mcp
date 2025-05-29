@@ -11,8 +11,8 @@ class Config:
     """Configuration for the OpenAPI MCP Server."""
 
     # API information
-    api_name: str = 'petstore'
-    api_base_url: str = 'https://petstore3.swagger.io/api/v3'
+    api_name: str = 'awslabs-openapi-mcp-server'
+    api_base_url: str = 'https://localhost:8000'
     api_spec_url: str = ''
     api_spec_path: str = ''
 

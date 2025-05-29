@@ -1,8 +1,6 @@
 """Cognito User Pool authentication provider."""
 
 import boto3
-import jwt
-import os
 import threading
 import time
 from awslabs.openapi_mcp_server import logger
@@ -15,14 +13,14 @@ from awslabs.openapi_mcp_server.auth.auth_errors import (
     NetworkError,
 )
 from awslabs.openapi_mcp_server.auth.bearer_auth import BearerAuthProvider
-from typing import Dict
+from typing import Dict, Optional
 
 
 class CognitoAuthProvider(BearerAuthProvider):
     """Cognito User Pool authentication provider.
 
-    This provider obtains tokens from AWS Cognito User Pools
-    and adds an Authorization header with a Bearer token
+    This provider obtains ID tokens from AWS Cognito User Pools
+    and delegates to BearerAuthProvider for adding Authorization headers
     to all HTTP requests.
     """
 
@@ -36,30 +34,40 @@ class CognitoAuthProvider(BearerAuthProvider):
         # Store Cognito-specific configuration
         self._client_id = config.auth_cognito_client_id
         self._username = config.auth_cognito_username
-
-        # Try to get password from env var if not in config
-        self._password = config.auth_cognito_password or os.environ.get('AUTH_COGNITO_PASSWORD')
-
+        self._password = config.auth_cognito_password
         self._user_pool_id = config.auth_cognito_user_pool_id
-        self._region = config.auth_cognito_region or 'us-east-1'
+        self._region = config.auth_cognito_region
 
         # Add debug log early in initialization
         logger.debug(
-            f'Cognito auth configuration: Username={self._username}, ClientID={self._client_id}, Password={"SET" if self._password else "NOT SET"}, UserPoolID={self._user_pool_id or "NOT SET"}'
+            f'Cognito auth configuration: Username={self._username}, ClientID={self._client_id}, '
+            f'Password={"SET" if self._password else "NOT SET"}, UserPoolID={self._user_pool_id or "NOT SET"}'
         )
 
         # Token management
-        self._token = None
         self._token_expires_at = 0
         self._refresh_token_value = None
         self._token_lock = threading.RLock()  # For thread safety
 
-        # Call parent initializer which will validate and initialize auth
-        super().__init__(config)
+        # Get initial token before parent initialization
+        try:
+            # Only try to get token if we have the minimum required credentials
+            if self._client_id and self._username and self._password:
+                token = self._get_cognito_token()
+                if token:
+                    # Set token in config for parent class to use
+                    config.auth_token = token
+            else:
+                logger.warning(
+                    'Missing required Cognito credentials, skipping initial token acquisition'
+                )
+        except Exception as e:
+            logger.warning(f'Failed to get initial Cognito token: {e}')
+            # We'll let the parent validation handle this error
 
-        # If validation passed, get the token
-        if self.is_configured():
-            config.auth_token = self._get_cognito_token()
+        # Call parent initializer which will validate and initialize auth
+        # This will set self._token from config.auth_token
+        super().__init__(config)
 
     def _validate_config(self) -> bool:
         """Validate the configuration.
@@ -97,20 +105,15 @@ class CognitoAuthProvider(BearerAuthProvider):
                 },
             )
 
-        # Validate token
-        if not self._token:
-            raise InvalidCredentialsError(
-                'Failed to obtain Cognito token',
-                {'help': 'Check your Cognito credentials and try again'},
-            )
-
-        return True
+        # Let parent class validate the token
+        return super()._validate_config()
 
     def _log_validation_error(self) -> None:
         """Log validation error messages."""
         logger.error('Cognito authentication requires client ID, username, and password.')
         logger.error(
-            'Please provide client ID using --auth-cognito-client-id, username using --auth-cognito-username, and password using --auth-cognito-password command line arguments or corresponding environment variables.'
+            'Please provide client ID using --auth-cognito-client-id, username using --auth-cognito-username, '
+            'and password using --auth-cognito-password command line arguments or corresponding environment variables.'
         )
 
     def get_auth_headers(self) -> Dict[str, str]:
@@ -120,11 +123,17 @@ class CognitoAuthProvider(BearerAuthProvider):
             Dict[str, str]: Authentication headers
 
         """
+        # Check if token needs refreshing and refresh if necessary
+        self._check_and_refresh_token_if_needed()
+
+        # Delegate to parent class for header generation
+        return super().get_auth_headers()
+
+    def _check_and_refresh_token_if_needed(self) -> None:
+        """Check if token needs refreshing and refresh if necessary."""
         with self._token_lock:
             if self._is_token_expired_or_expiring_soon():
                 self._refresh_token()
-
-        return super().get_auth_headers()
 
     def _is_token_expired_or_expiring_soon(self) -> bool:
         """Check if token is expired or will expire soon.
@@ -138,29 +147,43 @@ class CognitoAuthProvider(BearerAuthProvider):
         return time.time() + buffer_seconds >= self._token_expires_at
 
     def _refresh_token(self) -> None:
-        """Refresh the token if possible, or re-authenticate."""
+        """Refresh the token if possible, or re-authenticate.
+
+        Logs at INFO level when token is refreshed.
+        """
         try:
+            old_token = self._token
+            new_token = None
+
             # Try using refresh token if available
             if self._refresh_token_value:
-                logger.debug(f'Refreshing Cognito token for user: {self._username}')
-                self._token = self._refresh_cognito_token()
-            else:
-                # Otherwise re-authenticate with username/password
-                logger.debug(f'Re-authenticating Cognito user: {self._username}')
-                self._token = self._get_cognito_token()
+                logger.debug(f'Attempting to refresh Cognito token for user: {self._username}')
+                new_token = self._refresh_cognito_token()
 
-            # Update auth headers with new token
-            self._auth_headers = self._generate_auth_headers(self._token)
+            # If refresh failed or no refresh token available, re-authenticate
+            if not new_token:
+                logger.debug(f'Re-authenticating Cognito user: {self._username}')
+                new_token = self._get_cognito_token()
+
+            # Update token if we got a new one
+            if new_token and new_token != old_token:
+                self._token = new_token
+                logger.info(f'Cognito token refreshed for user: {self._username}')
+
+                # Force parent class to regenerate auth headers with new token
+                self._initialize_auth()
+            else:
+                logger.debug('Token refresh did not result in a new token')
 
         except Exception as e:
             logger.error(f'Failed to refresh token: {e}')
             raise ExpiredTokenError('Token refresh failed', {'error': str(e)})
 
-    def _get_cognito_token(self) -> str:
+    def _get_cognito_token(self) -> Optional[str]:
         """Get a new token from Cognito using username/password.
 
         Returns:
-            str: Cognito access token
+            str: Cognito ID token or None if authentication fails
 
         Raises:
             AuthenticationError: If authentication fails
@@ -234,13 +257,23 @@ class CognitoAuthProvider(BearerAuthProvider):
             if id_token:
                 self._token_expires_at = self._extract_token_expiry(id_token)
 
-            # Log token length for debugging
-            access_token = auth_result.get('AccessToken')
-            token_length = len(access_token) if access_token else 0
-            logger.debug(f'Obtained Cognito token, length: {token_length} characters')
+            # Get the ID token
+            id_token = auth_result.get('IdToken')
+            if id_token:
+                # Extract token expiry
+                self._token_expires_at = self._extract_token_expiry(id_token)
 
-            # Return the access token
-            return access_token
+                # Log token acquisition at INFO level
+                logger.info(f'Obtained new Cognito ID token for user: {self._username}')
+
+                # Log token length for debugging
+                token_length = len(id_token) if id_token else 0
+                logger.debug(f'Token length: {token_length} characters')
+
+                return id_token
+            else:
+                logger.error('No ID token found in authentication result')
+                return None
 
         except client.exceptions.NotAuthorizedException as e:
             logger.error(f'Authentication failed: {e}')
@@ -346,11 +379,11 @@ class CognitoAuthProvider(BearerAuthProvider):
                 {'error': str(e), 'help': 'Check your network connection and AWS credentials'},
             )
 
-    def _refresh_cognito_token(self) -> str:
+    def _refresh_cognito_token(self) -> Optional[str]:
         """Refresh the Cognito token using the refresh token.
 
         Returns:
-            str: New Cognito access token
+            str: New Cognito ID token or None if refresh fails
 
         Raises:
             AuthenticationError: If token refresh fails
@@ -398,20 +431,30 @@ class CognitoAuthProvider(BearerAuthProvider):
             if id_token:
                 self._token_expires_at = self._extract_token_expiry(id_token)
 
-            # Log token length for debugging
-            access_token = auth_result.get('AccessToken')
-            token_length = len(access_token) if access_token else 0
-            logger.debug(f'Refreshed Cognito token, length: {token_length} characters')
+            # Get the ID token
+            id_token = auth_result.get('IdToken')
+            if id_token:
+                # Extract token expiry
+                self._token_expires_at = self._extract_token_expiry(id_token)
 
-            # Return the new access token
-            return access_token
+                # Log token refresh at INFO level
+                logger.info(f'Successfully refreshed Cognito ID token for user: {self._username}')
+
+                # Log token length for debugging
+                token_length = len(id_token) if id_token else 0
+                logger.debug(f'Token length: {token_length} characters')
+
+                return id_token
+            else:
+                logger.error('No ID token found in refresh result')
+                return None
 
         except client.exceptions.NotAuthorizedException:
-            logger.warning('Refresh token expired, re-authenticating...')
-            return self._get_cognito_token()  # Fall back to full auth
+            logger.warning('Refresh token expired, falling back to re-authentication')
+            return None  # Will trigger a full re-authentication
         except Exception as e:
             logger.error(f'Token refresh error: {e}')
-            raise ExpiredTokenError('Token refresh failed', {'error': str(e)})
+            return None  # Will trigger a full re-authentication
 
     def _extract_token_expiry(self, token: str) -> int:
         """Extract expiry timestamp from token.
@@ -424,26 +467,48 @@ class CognitoAuthProvider(BearerAuthProvider):
 
         """
         try:
-            # Decode the token without verification to extract the expiry
-            # This is safe because we're not using the token for authentication here
-            # Use an empty key since we're not verifying the signature
-            # Disable all verification options since we just want to extract the expiry
-            decoded = jwt.decode(
-                token,
-                key='',
-                options={
-                    'verify_signature': False,
-                    'verify_aud': False,
-                    'verify_iat': False,
-                    'verify_exp': False,
-                    'verify_nbf': False,
-                    'verify_iss': False,
-                    'verify_sub': False,
-                    'verify_jti': False,
-                    'verify_at_hash': False,
-                },
-            )
-            return decoded.get('exp', 0)
+            # Parse the JWT token without using the decode function
+            # JWT tokens are in the format: header.payload.signature
+            # We only need the payload part to extract the expiry
+            parts = token.split('.')
+            if len(parts) != 3:
+                raise ValueError('Invalid JWT token format')
+
+            # The payload is base64url encoded
+            # Add padding if needed
+            payload = parts[1]
+            padding = '=' * ((4 - len(payload) % 4) % 4)  # Fix padding calculation
+
+            # Replace URL-safe characters and decode
+            payload = payload.replace('-', '+').replace('_', '/') + padding
+
+            try:
+                import base64
+
+                decoded_payload = base64.b64decode(payload).decode('utf-8')
+                import json
+
+                payload_data = json.loads(decoded_payload)
+                exp_time = payload_data.get('exp', 0)
+
+                # Log the expiry duration at INFO level
+                if exp_time > 0:
+                    current_time = int(time.time())
+                    duration_seconds = exp_time - current_time
+                    duration_minutes = duration_seconds / 60
+                    duration_hours = duration_minutes / 60
+
+                    if duration_seconds > 0:
+                        logger.info(
+                            f'Token expires in {duration_hours:.2f} hours ({duration_minutes:.0f} minutes)'
+                        )
+                    else:
+                        logger.info(f'Token is already expired by {-duration_seconds} seconds')
+
+                return exp_time
+            except Exception as e:
+                logger.warning(f'Failed to decode payload: {e}')
+                raise
         except Exception as e:
             logger.warning(f'Failed to extract token expiry: {e}')
             # Default to 1 hour from now if extraction fails

@@ -10,6 +10,7 @@ import sys
 # Import from our modules - use direct imports from sub-modules for better patching in tests
 from awslabs.openapi_mcp_server import logger
 from awslabs.openapi_mcp_server.api.config import Config, load_config
+from awslabs.openapi_mcp_server.prompts import MCPPromptManager
 from awslabs.openapi_mcp_server.utils.http_client import HttpClientFactory, make_request_with_retry
 from awslabs.openapi_mcp_server.utils.metrics_provider import metrics
 from awslabs.openapi_mcp_server.utils.openapi import load_openapi_spec
@@ -176,6 +177,11 @@ def create_mcp_server(config: Config) -> FastMCP:
 
         # Create the FastMCP server with custom route mappings
         logger.info('Creating FastMCP server with OpenAPI specification')
+        # Update API name from OpenAPI spec title if available
+        if openapi_spec and isinstance(openapi_spec, dict) and 'info' in openapi_spec:
+            if 'title' in openapi_spec['info'] and openapi_spec['info']['title']:
+                config.api_name = openapi_spec['info']['title']
+                logger.info(f'Updated API name from OpenAPI spec title: {config.api_name}')
         server = FastMCPOpenAPI(
             openapi_spec=openapi_spec,
             client=client,
@@ -200,34 +206,18 @@ def create_mcp_server(config: Config) -> FastMCP:
 
         logger.info(f'Successfully configured API: {config.api_name}')
 
-        # Update API name from OpenAPI spec title if available
-        if openapi_spec and isinstance(openapi_spec, dict) and 'info' in openapi_spec:
-            if 'title' in openapi_spec['info'] and openapi_spec['info']['title']:
-                config.api_name = openapi_spec['info']['title']
-                logger.info(f'Updated API name from OpenAPI spec title: {config.api_name}')
-
-        # Generate unified prompts (API overview, operation-specific, and mapping reference)
+        # Generate MCP-compliant prompts
         try:
-            from awslabs.openapi_mcp_server.prompts.prompt_orchestrator import (
-                generate_unified_prompts,
-            )
+            logger.info(f'Generating MCP prompts for API: {config.api_name}')
+            # Create prompt manager
+            prompt_manager = MCPPromptManager()
 
-            logger.info(f'Generating unified prompts for API: {config.api_name}')
-            # Run the async function
-            asyncio.run(generate_unified_prompts(server, config.api_name, openapi_spec))  # type: ignore
+            # Generate prompts
+            asyncio.run(prompt_manager.generate_prompts(server, config.api_name, openapi_spec))
 
-            # Log the number of prompts after generation
-            prompt_count = (
-                len(server._prompt_manager._prompts)
-                if hasattr(server, '_prompt_manager')
-                and hasattr(server._prompt_manager, '_prompts')
-                else 0
-            )
-            logger.info(f'Total prompts after generation: {prompt_count}')
+            # Register resource handler
+            prompt_manager.register_api_resource_handler(server, config.api_name, client)
 
-            # Log the names of all prompts
-            if prompt_count > 0:
-                prompt_names = list(server._prompt_manager._prompts.keys())
         except Exception as e:
             logger.warning(f'Failed to generate operation-specific prompts: {e}')
             import traceback

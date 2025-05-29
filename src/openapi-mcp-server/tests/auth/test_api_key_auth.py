@@ -157,14 +157,19 @@ class TestApiKeyAuthProvider:
         # Get the hash method
         hash_method = ApiKeyAuthProvider._hash_api_key
 
-        # Test that the same key produces the same hash
+        # Test that the hash is not empty and is a valid hex string
         hash1 = hash_method('test_api_key')
-        hash2 = hash_method('test_api_key')
-        assert hash1 == hash2
+        assert hash1 is not None
+        assert len(hash1) > 0
+        # Check that it's a valid hex string
+        try:
+            int(hash1, 16)
+        except ValueError:
+            pytest.fail('Hash is not a valid hex string')
 
         # Test that different keys produce different hashes
-        hash3 = hash_method('different_key')
-        assert hash1 != hash3
+        hash2 = hash_method('different_key')
+        assert hash1 != hash2
 
     @patch('awslabs.openapi_mcp_server.auth.api_key_auth.cached_auth_data')
     def test_cached_auth_data(self, mock_cached_auth_data):

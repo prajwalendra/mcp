@@ -1,5 +1,5 @@
-"""Prompts generation modules for OpenAPI MCP Server."""
+"""MCP prompt generation for OpenAPI specifications."""
 
-from awslabs.openapi_mcp_server.prompts.prompt_orchestrator import generate_api_instructions
+from awslabs.openapi_mcp_server.prompts.prompt_manager import MCPPromptManager
 
-__all__ = ['generate_api_instructions']
+__all__ = ['MCPPromptManager']

@@ -1,6 +1,6 @@
 """API Key authentication provider."""
 
-import hashlib
+import bcrypt
 from awslabs.openapi_mcp_server import logger
 from awslabs.openapi_mcp_server.api.config import Config
 from awslabs.openapi_mcp_server.auth.auth_cache import cached_auth_data
@@ -102,8 +102,7 @@ class ApiKeyAuthProvider(BaseAuthProvider):
 
         """
         # Create a hash of the API key to use as a cache key
-        # This avoids storing the actual API key in the cache key
-        return hashlib.sha256(api_key.encode('utf-8')).hexdigest()
+        return bcrypt.hashpw(api_key.encode('utf-8'), bcrypt.gensalt(rounds=10)).hex()
 
     @cached_auth_data(ttl=3600)  # Cache for 1 hour by default
     def _generate_auth_headers(self, api_key_hash: str, api_key_name: str) -> Dict[str, str]:

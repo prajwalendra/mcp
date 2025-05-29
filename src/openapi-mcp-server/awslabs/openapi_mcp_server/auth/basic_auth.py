@@ -1,7 +1,6 @@
 """Basic authentication provider."""
 
 import base64
-import hashlib
 import httpx
 from awslabs.openapi_mcp_server import logger
 from awslabs.openapi_mcp_server.api.config import Config
@@ -90,8 +89,15 @@ class BasicAuthProvider(BaseAuthProvider):
         """
         # Create a hash of the credentials to use as a cache key
         # This avoids storing the actual credentials in the cache key
+        # Using bcrypt for stronger security
+        import bcrypt
+
         credentials = f'{username}:{password}'
-        return hashlib.sha256(credentials.encode('utf-8')).hexdigest()
+        # Generate a salt and hash the credentials
+        # We only need a string representation for caching, so we'll use the hexdigest of the hash
+        hashed = bcrypt.hashpw(credentials.encode('utf-8'), bcrypt.gensalt(rounds=10))
+        # Convert to hex string for consistent cache key format
+        return hashed.hex()
 
     @cached_auth_data(ttl=3600)  # Cache for 1 hour by default
     def _generate_auth_headers(self, credentials_hash: str) -> Dict[str, str]:

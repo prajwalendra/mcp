@@ -82,6 +82,17 @@ python -m awslabs.openapi_mcp_server.server
 - **Basic Authentication**: Requires both username and password. The server will exit gracefully with an error message if either is missing.
 - **API Key Authentication**: Can be placed in a header (default), query parameter, or cookie.
 - **Cognito Authentication**: Requires client ID, username, and password. The password can be stored in the system environment variable `AUTH_COGNITO_PASSWORD` for security. Tokens are automatically refreshed when they expire.
+  - **ID Token Usage**: The Cognito authentication provider uses the **ID Token** for authentication. This is consistent with the AWS CLI approach:
+    ```bash
+    # Get ID Token from Cognito and use it for authentication
+    export AUTH_TOKEN=$(aws cognito-idp initiate-auth \
+      --auth-flow USER_PASSWORD_AUTH \
+      --client-id $AUTH_COGNITO_CLIENT_ID \
+      --auth-parameters USERNAME=$AUTH_COGNITO_USERNAME,PASSWORD=$AUTH_COGNITO_PASSWORD \
+      --query 'AuthenticationResult.IdToken' \
+      --output text)
+    ```
+    Support for using the Access Token will be added in a future release.
   - **User Pool ID**: Some Cognito configurations require a User Pool ID. If you encounter authentication errors, try providing the User Pool ID using `--auth-cognito-user-pool-id` or `AUTH_COGNITO_USER_POOL_ID`.
   - **Authentication Flows**: The provider automatically tries different authentication flows (USER_PASSWORD_AUTH and ADMIN_USER_PASSWORD_AUTH) based on your Cognito configuration.
 
