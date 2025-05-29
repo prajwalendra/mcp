@@ -1,10 +1,9 @@
 #!/usr/bin/env python3
 
-import json
 import unittest
-from unittest.mock import MagicMock
-from fastmcp import FastMCP
 from awslabs.openapi_mcp_server.prompts.generators.operation_prompts import create_operation_prompt
+from fastmcp import FastMCP
+from unittest.mock import MagicMock
 
 
 class TestSecureOperationPrompt(unittest.TestCase):
@@ -122,11 +121,7 @@ class TestSecureOperationPrompt(unittest.TestCase):
         responses = {
             '200': {
                 'description': 'successful operation',
-                'content': {
-                    'application/json': {
-                        'schema': {'$ref': '#/components/schemas/Pet'}
-                    }
-                },
+                'content': {'application/json': {'schema': {'$ref': '#/components/schemas/Pet'}}},
             },
             '400': {'description': 'Invalid ID supplied'},
             '404': {'description': 'Pet not found'},
@@ -182,6 +177,7 @@ class TestSecureOperationPrompt(unittest.TestCase):
         """Test resource operation type."""
         # Mock the determine_operation_type function
         import awslabs.openapi_mcp_server.prompts.generators.operation_prompts as op_prompts
+
         original_determine = op_prompts.determine_operation_type
         op_prompts.determine_operation_type = MagicMock(return_value='resource')
 
@@ -208,9 +204,7 @@ class TestSecureOperationPrompt(unittest.TestCase):
                 '200': {
                     'description': 'successful operation',
                     'content': {
-                        'application/json': {
-                            'schema': {'$ref': '#/components/schemas/Pet'}
-                        }
+                        'application/json': {'schema': {'$ref': '#/components/schemas/Pet'}}
                     },
                 },
             }
@@ -243,8 +237,12 @@ class TestSecureOperationPrompt(unittest.TestCase):
             resource_message = messages[1]
             self.assertEqual(resource_message['role'], 'user')
             self.assertEqual(resource_message['content']['type'], 'resource')
-            self.assertEqual(resource_message['content']['resource']['uri'], 'api://petstore/pet/{petId}')
-            self.assertEqual(resource_message['content']['resource']['mimeType'], 'application/json')
+            self.assertEqual(
+                resource_message['content']['resource']['uri'], 'api://petstore/pet/{petId}'
+            )
+            self.assertEqual(
+                resource_message['content']['resource']['mimeType'], 'application/json'
+            )
 
         finally:
             # Restore original function
@@ -284,7 +282,7 @@ class TestSecureOperationPrompt(unittest.TestCase):
                         },
                     }
                 }
-            }
+            },
         }
         responses = {
             '200': {'description': 'successful operation'},
@@ -318,7 +316,7 @@ class TestSecureOperationPrompt(unittest.TestCase):
         self.assertEqual(prompt.arguments[0].name, 'id')
         self.assertEqual(prompt.arguments[1].name, 'name')
         self.assertEqual(prompt.arguments[2].name, 'status')
-        
+
         # Test the function with parameters
         messages = prompt.fn(1, 'doggie', 'available')
         self.assertIsInstance(messages, list)
