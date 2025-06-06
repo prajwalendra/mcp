@@ -89,9 +89,9 @@ The Cost Analysis MCP Server enables AI assistants to analyze the cost of AWS se
 
 [Learn more about the Cost Analysis MCP Server](servers/cost-analysis-mcp-server.md)
 
-### AWS Lambda MCP Server
+### AWS Lambda Tool MCP Server
 
-The AWS Lambda MCP Server enables AI assistants to select and run AWS Lambda functions as MCP tools.
+The AWS Lambda Tool MCP Server enables AI assistants to select and run AWS Lambda functions as MCP tools.
 
 **Features:**
 
@@ -100,7 +100,7 @@ The AWS Lambda MCP Server enables AI assistants to select and run AWS Lambda fun
 - Filter functions by name, tag, or both
 - Use AWS credentials to invoke the Lambda functions
 
-[Learn more about the AWS Lambda MCP Server](servers/lambda-mcp-server.md)
+[Learn more about the AWS Lambda Tool MCP Server](servers/lambda-tool-mcp-server.md)
 
 ### Amazon Aurora DSQL MCP Server
 
@@ -262,6 +262,19 @@ A server for Aurora MySql.
 
 [Learn more about the Amazon Aurora MySql MCP Server](servers/mysql-mcp-server.md)
 
+### Amazon CloudWatch Logs MCP Server
+
+An AWS Labs Model Context Protocol (MCP) server for Amazon Cloudwatch Logs.
+
+**Features:**
+
+- Discover log groups and their metadata
+- Execute CloudWatch Log Insights queries against log groups
+
+Use this MCP server to first discover available logs groups, then run queries on them to filter, analyze, aggregate, etc. logs.
+
+[Learn more about the Amazon CloudWatch Logs MCP Server](servers/cloudwatch-logs-mcp-server.md)
+
 ### Amazon DynamoDB MCP Server
 
 A server for interacting with Amazon DynamoDB
@@ -287,6 +300,21 @@ The DocumentDB MCP Server enables AI assistants to interact with Amazon Document
 
 [Learn more about the Amazon DocumentDB MCP Server](servers/documentdb-mcp-server.md)
 
+### Amazon EKS MCP Server
+
+A Model Context Protocol (MCP) server for Amazon EKS that enables generative AI models to create and manage Kubernetes clusters on AWS through MCP tools.
+
+**Features:**
+
+- EKS Cluster Management: Create and manage EKS clusters with dedicated VPCs, proper networking, and CloudFormation templates for reliable, repeatable deployments
+- Kubernetes Resource Management: Create, read, update, delete, and list Kubernetes resources with support for applying YAML manifests
+- Application Deployment: Generate and deploy Kubernetes manifests with customizable parameters for containerized applications
+- Operational Support: Access pod logs, Kubernetes events, and monitor cluster resources
+- CloudWatch Integration: Retrieve logs and metrics from CloudWatch for comprehensive monitoring
+- Security-First Design: Configurable read-only mode, sensitive data access controls, and IAM integration for proper permissions management
+
+[Learn more about the Amazon EKS MCP Server](servers/eks-mcp-server.md)
+
 ### Synthetic Data MCP Server
 
 A server for generating, validating, and managing synthetic data.
@@ -310,6 +338,31 @@ A server for interacting with Amazon Neptune graph database.
 - Get the schema of the graph
 
 [Learn more about the Amazon Neptune MCP Server](servers/amazon-neptune-mcp-server.md)
+
+### AWS Bedrock Data Automation MCP Server
+
+A Model Context Protocol (MCP) server for Amazon Bedrock Data Automation that enables AI assistants to analyze documents, images, videos, and audio files using Amazon Bedrock Data Automation projects.
+
+**Features:**
+
+- Project Management: List and get details about Bedrock Data Automation projects
+- Asset Analysis: Extract insights from unstructured content using Bedrock Data Automation
+- Support for Multiple Content Types: Process documents, images, videos, and audio files
+- Integration with Amazon S3: Seamlessly upload and download assets and results
+
+[Learn more about the AWS Bedrock Data Automation MCP Server](servers/aws-bedrock-data-automation-mcp-server.md)
+
+### Amazon Keyspaces (for Apache Cassandra) MCP Server
+
+An Amazon Keyspaces (for Apache Cassandra) MCP server enables AI assistants to interact with Amazon Keyspaces and Apache Cassandra.
+
+**Features:**
+- Explore keyspaces and tables.
+- Execute CQL SELECT queries against the configured database.
+- Get feedback and suggestions for improving query performance.
+- Use with Amazon Keyspaces, or with Apache Cassandra.
+
+[Learn more about the Amazon Keysapces MCP Server](servers/amazon-keyspaces-mcp-server.md)
 
 ## Installation and Setup
 

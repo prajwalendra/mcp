@@ -1,14 +1,18 @@
 # Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 #
-# Licensed under the Apache License, Version 2.0 (the "License"). You may not use this file except in compliance
-# with the License. A copy of the License is located at
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
 #
-#    http://www.apache.org/licenses/LICENSE-2.0
+#     http://www.apache.org/licenses/LICENSE-2.0
 #
-# or in the 'license' file accompanying this file. This file is distributed on an 'AS IS' BASIS, WITHOUT WARRANTIES
-# OR CONDITIONS OF ANY KIND, express or implied. See the License for the specific language governing permissions
-# and limitations under the License.
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
+import botocore.config
 import sys
 from awslabs.cfn_mcp_server.errors import ClientError
 from boto3 import Session
@@ -16,6 +20,9 @@ from os import environ
 
 
 session = Session(profile_name=environ.get('AWS_PROFILE'))
+session_config = botocore.config.Config(
+    user_agent_extra='cfn-mcp-server/1.0.0',
+)
 
 
 def get_aws_client(service_name, region_name=None):
@@ -47,7 +54,7 @@ def get_aws_client(service_name, region_name=None):
         print(
             f'Creating new {service_name} client for region {region_name} with auto-detected credentials'
         )
-        client = session.client(service_name, region_name=region_name)
+        client = session.client(service_name, region_name=region_name, config=session_config)
 
         print('Created client for service with credentials')
         return client

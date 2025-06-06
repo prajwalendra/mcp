@@ -23,8 +23,9 @@ A suite of specialized MCP servers that help you get the most out of AWS, wherev
     - [Amazon Nova Canvas MCP Server](#amazon-nova-canvas-mcp-server)
     - [AWS Diagram MCP Server](#aws-diagram-mcp-server)
     - [AWS CloudFormation MCP Server](#aws-cloudformation-mcp-server)
-    - [AWS Lambda MCP Server](#aws-lambda-mcp-server)
+    - [AWS Lambda MCP Server](#aws-lambda-tool-mcp-server)
     - [Amazon SNS / SQS MCP Server](#amazon-sns--sqs-mcp-server)
+    - [AWS Step Functions Tool MCP Server](#aws-step-functions-tool-mcp-server)
     - [AWS Terraform MCP Server](#aws-terraform-mcp-server)
     - [Frontend MCP Server](#frontend-mcp-server)
     - [Amazon ElastiCache/MemoryDB Valkey for MCP Server](#amazon-elasticache--memorydb-for-valkey-mcp-server)
@@ -32,14 +33,21 @@ A suite of specialized MCP servers that help you get the most out of AWS, wherev
     - [AWS Location Service MCP Server](#aws-location-service-mcp-server)
     - [Git Repo Research MCP Server](#git-repo-research-mcp-server)
     - [Code Documentation Generation MCP Server](#code-documentation-generation-mcp-server)
-    - [Amazon Aurora Postgres MCP Server](#amazon-aurora-postgres-mcp-server)
     - [Amazon Aurora MySql MCP Server](#amazon-aurora-mysql-mcp-server)
+    - [Amazon Aurora Postgres MCP Server](#amazon-aurora-postgres-mcp-server)
     - [Amazon MQ MCP Server](#amazon-mq-mcp-server)
     - [Synthetic Data MCP Server](#synthetic-data-mcp-server)
     - [Amazon Aurora DSQL MCP Server](#amazon-aurora-dsql-mcp-server)
+    - [Amazon Cloudwatch Logs MCP Server](#amazon-cloudwatch-logs-mcp-server)
     - [Amazon DynamoDB MCP Server](#amazon-dynamodb-mcp-server)
+    - [Amazon Keyspaces MCP Server](#amazon-keyspaces-mcp-server)
     - [Amazon Neptune MCP Server](#amazon-neptune-mcp-server)
     - [Amazon DocumentDB MCP Server](#amazon-documentdb-mcp-server)
+    - [Amazon EKS MCP Server](#amazon-eks-mcp-server)
+    - [AWS Serverless MCP Server](#aws-serverless-mcp-server)
+    - [Amazon ECS MCP Server](#amazon-ecs-mcp-server)
+    - [Finch MCP Server](#finch-mcp-server)
+    - [AWS Bedrock Data Automation MCP Server](#aws-bedrock-data-automation-mcp-server)
     - [Use Cases for the Servers](#use-cases-for-the-servers)
   - [Installation and Setup](#installation-and-setup)
     - [Running MCP servers in containers](#running-mcp-servers-in-containers)
@@ -131,7 +139,7 @@ A server for listing and querying Amazon Kendra Indexes
 - List the Kendra indexes in your account.
 - Query Kendra indexes with natural language to give additional RAG context to your AI tool.
 
-[Learn more](src/amazon-kendra-index-mcp-server/README.md) | [Documentation](https://awslabs.github.io/mcp/servers/amazon-kendra-index-mcp-server/)
+[Learn more](src/amazon-kendra-index-mcp-server/README.md) | [Documentation](https://awslabs.github.io/mcp/servers/kendra-index-mcp-server/)
 
 ### Amazon Bedrock Knowledge Bases Retrieval MCP Server
 
@@ -209,7 +217,7 @@ A server to manage AWS resources via cloudcontrol. This allows you to perform CR
 
 ### AWS Lambda MCP Server
 
-[![PyPI version](https://img.shields.io/pypi/v/awslabs.lambda-mcp-server.svg)](https://pypi.org/project/awslabs.lambda-mcp-server/)
+[![PyPI version](https://img.shields.io/pypi/v/awslabs.lambda-tool-mcp-server.svg)](https://pypi.org/project/awslabs.lambda-tool-mcp-server/)
 
 A server to select and run AWS Lambda function as MCP tools without code changes.
 
@@ -218,7 +226,7 @@ A server to select and run AWS Lambda function as MCP tools without code changes
 - This approach allows an MCP client to use other AWS services, private networks, and the public internet.
 - The Lambda function description is used by MCP to describe the tool and should guide the FMs on when (what does the function provide?) and how (which parameters it needs? which syntax?) to use it.
 
-[Learn more](src/lambda-mcp-server/README.md) | [Documentation](https://awslabs.github.io/mcp/servers/lambda-mcp-server/)
+[Learn more](src/lambda-tool-mcp-server/README.md) | [Documentation](https://awslabs.github.io/mcp/servers/lambda-tool-mcp-server/)
 
 ### Amazon SNS / SQS MCP Server
 
@@ -232,6 +240,20 @@ A server for Amazon SNS / SQS.
 - Modify Topic / Queue Attributes
 
 [Learn more](src/amazon-sns-sqs-mcp-server/README.md) | [Documentation](https://awslabs.github.io/mcp/servers/amazon-sns-sqs-mcp-server/)
+
+### AWS Step Functions Tool MCP Server
+
+[![PyPI version](https://img.shields.io/pypi/v/awslabs.stepfunctions-tool-mcp-server.svg)](https://pypi.org/project/awslabs.stepfunctions-tool-mcp-server/)
+
+A server that acts as a bridge between MCP clients and AWS Step Functions state machines, allowing AI models to execute and manage complex workflows.
+
+- Run AWS Step Functions state machines as MCP tools without code changes
+- Support for both Standard and Express workflows
+- EventBridge Schema Registry integration for input validation
+- IAM-based authentication and authorization
+- Comprehensive workflow documentation generation
+
+[Learn more](src/stepfunctions-tool-mcp-server/README.md) | [Documentation](https://awslabs.github.io/mcp/servers/stepfunctions-tool-mcp-server/)
 
 ### AWS Terraform MCP Server
 
@@ -300,7 +322,7 @@ A server for accessing AWS Location Service capabilities, focusing on place sear
 - Calculate routes between locations with turn-by-turn directions
 - Optimize waypoints for efficient routing
 
-[Learn more](src/aws-location-mcp-server/README.md)
+[Learn more](src/aws-location-mcp-server/README.md) | [Documentation](https://awslabs.github.io/mcp/servers/aws-location-mcp-server/)
 
 ### Git Repo Research MCP Server
 
@@ -340,6 +362,19 @@ A server for Aurora Postgres.
 
 [Learn more](src/postgres-mcp-server/README.md) | [Documentation](https://awslabs.github.io/mcp/servers/postgres-mcp-server/)
 
+### Amazon Keyspaces MCP Server
+
+[![PyPI version](https://img.shields.io/pypi/v/awslabs.amazon-keyspaces-mcp-server.svg)](https://pypi.org/project/awslabs.amazon-keyspaces-mcp-server/)
+
+A server for interacting with Amazon Keyspaces (for Apache Cassandra).
+
+- Explore keyspaces and tables
+- Execute CQL SELECT queries
+- Analyze schema design and query performance
+- Cassandra-compatible
+
+[Learn more](src/amazon-keyspaces-mcp-server/README.md) | [Documentation](https://awslabs.github.io/mcp/servers/amazon-keyspaces-mcp-server/)
+
 ### Amazon Aurora MySql MCP Server
 
 [![PyPI version](https://img.shields.io/pypi/v/awslabs.mysql-mcp-server.svg)](https://pypi.org/project/awslabs.mysql-mcp-server/)
@@ -378,6 +413,50 @@ A server for interacting with Amazon DocumentDB clusters, Amazon's MongoDB-compa
 
 [Learn more](src/documentdb-mcp-server/README.md) | [Documentation](https://awslabs.github.io/mcp/servers/documentdb-mcp-server/)
 
+### Amazon EKS MCP Server
+
+[![PyPI version](https://img.shields.io/pypi/v/awslabs.eks-mcp-server.svg)](https://pypi.org/project/awslabs.eks-mcp-server/)
+
+A Model Context Protocol (MCP) server for Amazon EKS that enables generative AI models to create and manage Kubernetes clusters on AWS through MCP tools.
+
+- EKS Cluster Management: Create and manage EKS clusters with dedicated VPCs, proper networking, and CloudFormation templates for reliable, repeatable deployments
+- Kubernetes Resource Management: Create, read, update, delete, and list Kubernetes resources with support for applying YAML manifests
+- Application Deployment: Generate and deploy Kubernetes manifests with customizable parameters for containerized applications
+- Operational Support: Access pod logs, Kubernetes events, and monitor cluster resources
+- CloudWatch Integration: Retrieve logs and metrics from CloudWatch for comprehensive monitoring
+- Security-First Design: Configurable read-only mode, sensitive data access controls, and IAM integration for proper permissions management
+
+[Learn more](src/eks-mcp-server/README.md) | [Documentation](https://awslabs.github.io/mcp/servers/eks-mcp-server/)
+
+### Amazon ECS MCP Server
+
+[![PyPI version](https://img.shields.io/pypi/v/awslabs.ecs-mcp-server.svg)](https://pypi.org/project/awslabs.ecs-mcp-server/)
+
+A Model Context Protocol (MCP) server for containerizing applications, deploying applications to Amazon Elastic Container Service (ECS), troubleshooting ECS deployments, and managing ECS resources.
+
+- Containerization Guidance: Generate Dockerfile and container configurations for web applications
+- ECS Deployment: Create AWS infrastructure needed to deploy containerized applications
+- Load Balancer Integration: Automatically configure Application Load Balancers (ALBs)
+- Resource Management: List and explore ECS resources such as task definitions, services, clusters, and tasks
+- Comprehensive Troubleshooting: Diagnose and resolve common ECS deployment issues
+- Security Best Practices: Implement AWS security best practices for container deployments
+
+[Learn more](src/ecs-mcp-server/README.md) | [Documentation](https://awslabs.github.io/mcp/servers/ecs-mcp-server/)
+
+### Finch MCP Server
+
+[![PyPI version](https://img.shields.io/pypi/v/awslabs.finch-mcp-server.svg)](https://pypi.org/project/awslabs.finch-mcp-server/)
+
+A Model Context Protocol (MCP) server for Finch that enables generative AI models to build and push container images through Finch CLI leveraged MCP tools.
+
+- Build container images using Finch with support for various build options
+- Push container images to repositories, including Amazon ECR
+- Create ECR repositories if they don't exist
+- Automatic management of the Finch VM on macOS and Windows
+- Automatic configuration of ECR credential helpers when needed
+
+[Learn more](src/finch-mcp-server/README.md) | [Documentation](https://awslabs.github.io/mcp/servers/finch-mcp-server/)
+
 ### Amazon MQ MCP Server
 
 [![PyPI version](https://img.shields.io/pypi/v/awslabs.amazon-mq-mcp-server.svg)](https://pypi.org/project/awslabs.amazon-mq-mcp-server/)
@@ -415,6 +494,16 @@ An AWS Labs Model Context Protocol (MCP) server for Aurora DSQL
 
 [Learn more](src/aurora-dsql-mcp-server/README.md) | [Documentation](https://awslabs.github.io/mcp/servers/aurora-dsql-mcp-server/)
 
+### Amazon Cloudwatch Logs MCP Server
+
+[![PyPI version](https://img.shields.io/pypi/v/awslabs.cloudwatch-logs-mcp-server.svg)](https://pypi.org/project/awslabs.cloudwatch-logs-mcp-server/)
+
+An AWS Labs Model Context Protocol (MCP) server for CloudWatch Logs
+
+- Read-only operations for discovering log groups and running CloudWatch Log Insights Queries on them.
+
+[Learn more](src/cloudwatch-logs-mcp-server/README.md) | [Documentation](https://awslabs.github.io/mcp/servers/cloudwatch-logs-mcp-server/)
+
 ### Amazon DynamoDB MCP Server
 
 [![PyPI version](https://img.shields.io/pypi/v/awslabs.dynamodb-mcp-server.svg)](https://pypi.org/project/awslabs.dynamodb-mcp-server/)
@@ -425,6 +514,32 @@ A server for interacting with Amazon DynamoDB
 - Data Plane operations like put, get, update, query and scan.
 
 [Learn more](src/dynamodb-mcp-server/README.md) | [Documentation](https://awslabs.github.io/mcp/servers/dynamodb-mcp-server/)
+
+### AWS Serverless MCP Server
+
+[![PyPI version](https://img.shields.io/pypi/v/awslabs.aws-serverless-mcp-server.svg)](https://pypi.org/project/awslabs.aws-serverless-mcp-server/)
+
+A server for interacting with AWS Serverless
+
+- Serverless Application Lifecycle: Intialize, build, deploy, and test Serverless Application Model (SAM) applications with SAM CLI
+- Web Application Deployment & Management: Deploy fullstack, frontend, and backend web applications onto AWS Serverless using Lambda Web Adapter.
+- Observability: Retrieve and logs and metrics of serverless resources
+- Guidance, Templates, and Deployment Help: Provides guidance on AWS Lambda use-cases, selecting an IaC framework, and deployment process onto AWS Serverless
+
+[Learn more](src/aws-serverless-mcp-server/README.md) | [Documentation](https://awslabs.github.io/mcp/servers/aws-serverless-mcp-server/)
+
+### AWS Bedrock Data Automation MCP Server
+
+[![PyPI version](https://img.shields.io/pypi/v/awslabs.aws-bedrock-data-automation-mcp-server.svg)](https://pypi.org/project/awslabs.aws-bedrock-data-automation-mcp-server/)
+
+A Model Context Protocol (MCP) server for Amazon Bedrock Data Automation that enables AI assistants to analyze documents, images, videos, and audio files using Amazon Bedrock Data Automation projects.
+
+- Project Management: List and get details about Bedrock Data Automation projects
+- Asset Analysis: Extract insights from unstructured content using Bedrock Data Automation
+- Support for Multiple Content Types: Process documents, images, videos, and audio files
+- Integration with Amazon S3: Seamlessly upload and download assets and results
+
+[Learn more](src/aws-bedrock-data-automation-mcp-server/README.md) | [Documentation](https://awslabs.github.io/mcp/servers/aws-bedrock-data-automation-mcp-server/)
 
 ## MCP AWS Lambda Handler Module
 
@@ -442,7 +557,6 @@ See [`src/mcp-lambda-handler/README.md`](src/mcp-lambda-handler/README.md) for f
 
 ## Use Cases for the Servers
 
-For example, you can use the **AWS Documentation MCP Server** to help your AI assistant research and generate up-to-date code for any AWS service, like Amazon Bedrock Inline agents. Alternatively, you could use the **CDK MCP Server** or the **Terraform MCP Server** to have your AI assistant create infrastructure-as-code implementations that use the latest APIs and follow AWS best practices. With the **Cost Analysis MCP Server**, you could ask "What would be the estimated monthly cost for this CDK project before I deploy it?" or "Can you help me understand the potential AWS service expenses for this infrastructure design?" and receive detailed cost estimations and budget planning insights. The **Valkey MCP Server** enables natural language interaction with Valkey data stores, allowing AI assistants to efficiently manage data operations through a simple conversational interface.
 For example, you can use the **AWS Documentation MCP Server** to help your AI assistant research and generate up-to-date code for any AWS service, like Amazon Bedrock Inline agents. Alternatively, you could use the **CDK MCP Server** or the **Terraform MCP Server** to have your AI assistant create infrastructure-as-code implementations that use the latest APIs and follow AWS best practices. With the **Cost Analysis MCP Server**, you could ask "What would be the estimated monthly cost for this CDK project before I deploy it?" or "Can you help me understand the potential AWS service expenses for this infrastructure design?" and receive detailed cost estimations and budget planning insights. The **Valkey MCP Server** enables natural language interaction with Valkey data stores, allowing AI assistants to efficiently manage data operations through a simple conversational interface.
 
 ## Installation and Setup
@@ -520,10 +634,10 @@ Example configuration for Amazon Q CLI MCP (`~/.aws/amazonq/mcp.json`):
       "disabled": false,
       "autoApprove": []
     },
-    "awslabs.lambda-mcp-server": {
+    "awslabs.lambda-tool-mcp-server": {
       "command": "uvx",
       "args": [
-        "awslabs.lambda-mcp-server@latest"
+        "awslabs.lambda-tool-mcp-server@latest"
       ],
       "env": {
         "AWS_PROFILE": "your-aws-profile",
@@ -615,7 +729,7 @@ Example configuration for Amazon Q CLI MCP (`~/.aws/amazonq/mcp.json`):
         "awslabs.cfn-mcp-server@latest"
       ],
       "env": {
-        "AWS_PROFILE": "your-aws-profile",
+        "AWS_PROFILE": "your-aws-profile"
       },
       "disabled": false,
       "autoApprove": []
@@ -630,7 +744,7 @@ See individual server READMEs for specific requirements and configuration option
 
 Using the _"@latest"_ suffix checks and downloads the latest MCP server package from pypi every time you start your MCP clients, but it comes with a cost of increased initial load times. If you want to minimize the initial load time, remove _"@latest"_ and manage your uv cache yourself using one of these approaches:
 
-- `uv cache clean <tool>`: where {tool} is the mcp server you want to delete from cache and install again (e.g.: "awslabs.lambda-mcp-server") (remember to remove the '<>').
+- `uv cache clean <tool>`: where {tool} is the mcp server you want to delete from cache and install again (e.g.: "awslabs.lambda-tool-mcp-server") (remember to remove the '<>').
 - `uvx <tool>@latest`: this will refresh the tool with the latest version and add it to the uv cache.
 
 ### Running MCP servers in containers
@@ -860,9 +974,9 @@ For every new project, always look at your MCP servers and use mcp-core as the s
       "disabled": false,
       "autoApprove": []
     },
-    "awslabs.lambda-mcp-server": {
+    "awslabs.lambda-tool-mcp-server": {
       "command": "uvx",
-      "args": ["awslabs.lambda-mcp-server@latest"],
+      "args": ["awslabs.lambda-tool-mcp-server@latest"],
       "env": {
         "AWS_PROFILE": "your-aws-profile",
         "AWS_REGION": "us-east-1",
@@ -923,9 +1037,9 @@ For every new project, always look at your MCP servers and use mcp-core as the s
       "disabled": false,
       "autoApprove": []
     },
-    "awslabs.lambda-mcp-server": {
+    "awslabs.lambda-tool-mcp-server": {
       "command": "uvx",
-      "args": ["awslabs.lambda-mcp-server@latest"],
+      "args": ["awslabs.lambda-tool-mcp-server@latest"],
       "env": {
         "AWS_PROFILE": "your-aws-profile",
         "AWS_REGION": "us-east-1",
