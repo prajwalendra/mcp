@@ -27,7 +27,7 @@ def test_config_default_values():
     assert config.host == '127.0.0.1'  # Default host should be localhost for security
     assert config.port == 8000
     assert config.transport == 'stdio'
-    assert config.version == '0.1.0'
+    assert config.version == '0.2.0'
 
 
 def test_config_custom_values():

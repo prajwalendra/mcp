@@ -42,6 +42,9 @@ class Config:
     auth_cognito_client_id: str = ''
     auth_cognito_username: str = ''
     auth_cognito_password: str = ''
+    auth_cognito_client_secret: str = ''
+    auth_cognito_domain: str = ''  # Required for client credentials flow
+    auth_cognito_scopes: str = ''  # Optional, comma-separated list of scopes
     auth_cognito_user_pool_id: str = ''
     auth_cognito_region: str = 'us-east-1'
 
@@ -52,7 +55,7 @@ class Config:
     debug: bool = False
     transport: str = 'stdio'  # stdio only
     message_timeout: int = 60
-    version: str = '0.1.0'
+    version: str = '0.2.0'
 
 
 def load_config(args: Any = None) -> Config:
@@ -93,6 +96,9 @@ def load_config(args: Any = None) -> Config:
         'AUTH_COGNITO_CLIENT_ID': (lambda v: setattr(config, 'auth_cognito_client_id', v)),
         'AUTH_COGNITO_USERNAME': (lambda v: setattr(config, 'auth_cognito_username', v)),
         'AUTH_COGNITO_PASSWORD': (lambda v: setattr(config, 'auth_cognito_password', v)),
+        'AUTH_COGNITO_CLIENT_SECRET': (lambda v: setattr(config, 'auth_cognito_client_secret', v)),
+        'AUTH_COGNITO_DOMAIN': (lambda v: setattr(config, 'auth_cognito_domain', v)),
+        'AUTH_COGNITO_SCOPES': (lambda v: setattr(config, 'auth_cognito_scopes', v)),
         'AUTH_COGNITO_USER_POOL_ID': (lambda v: setattr(config, 'auth_cognito_user_pool_id', v)),
         'AUTH_COGNITO_REGION': (lambda v: setattr(config, 'auth_cognito_region', v)),
         # Server configuration
@@ -183,6 +189,18 @@ def load_config(args: Any = None) -> Config:
         if hasattr(args, 'auth_cognito_password') and args.auth_cognito_password:
             logger.debug('Setting Cognito password from arguments')
             config.auth_cognito_password = args.auth_cognito_password
+
+        if hasattr(args, 'auth_cognito_client_secret') and args.auth_cognito_client_secret:
+            logger.debug('Setting Cognito client secret from arguments')
+            config.auth_cognito_client_secret = args.auth_cognito_client_secret
+
+        if hasattr(args, 'auth_cognito_domain') and args.auth_cognito_domain:
+            logger.debug('Setting Cognito domain from arguments')
+            config.auth_cognito_domain = args.auth_cognito_domain
+
+        if hasattr(args, 'auth_cognito_scopes') and args.auth_cognito_scopes:
+            logger.debug('Setting Cognito scopes from arguments')
+            config.auth_cognito_scopes = args.auth_cognito_scopes
 
         if hasattr(args, 'auth_cognito_user_pool_id') and args.auth_cognito_user_pool_id:
             logger.debug('Setting Cognito user pool ID from arguments')

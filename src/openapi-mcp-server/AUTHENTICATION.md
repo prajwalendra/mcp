@@ -12,7 +12,16 @@ The OpenAPI MCP Server supports five authentication methods:
 | **Bearer** | Token-based authentication | `--auth-token` |
 | **Basic** | Username/password authentication | `--auth-username`, `--auth-password` |
 | **API Key** | API key authentication | `--auth-api-key`, `--auth-api-key-name`, `--auth-api-key-in` |
-| **Cognito** | AWS Cognito User Pool authentication | `--auth-cognito-client-id`, `--auth-cognito-username`, `--auth-cognito-password`, `--auth-cognito-user-pool-id` (optional) |
+| **Cognito** | AWS Cognito User Pool authentication | See below for details |
+
+### Cognito Authentication Methods
+
+Cognito authentication supports two different flows:
+
+| Flow | Description | Required Parameters |
+|------|-------------|---------------------|
+| **Password Flow** | Username/password authentication | `--auth-cognito-client-id`, `--auth-cognito-username`, `--auth-cognito-password`, `--auth-cognito-user-pool-id` (optional) |
+| **Client Credentials Flow** | OAuth 2.0 client credentials flow for service-to-service authentication | `--auth-cognito-client-id`, `--auth-cognito-client-secret`, `--auth-cognito-domain`, `--auth-cognito-scopes` (optional) |
 
 ## Quick Start Examples
 
@@ -54,7 +63,7 @@ export AUTH_API_KEY_NAME="X-API-Key"
 export AUTH_API_KEY_IN="header"  # Options: header, query, cookie
 ```
 
-### Cognito Authentication
+### Cognito Authentication - Password Flow
 
 ```bash
 # Command line
@@ -76,12 +85,34 @@ export AUTH_COGNITO_REGION="us-east-1"
 python -m awslabs.openapi_mcp_server.server
 ```
 
+### Cognito Authentication - OAuth 2.0 Client Credentials Flow
+
+```bash
+# Command line
+python -m awslabs.openapi_mcp_server.server --auth-type cognito \
+  --auth-cognito-client-id "YOUR_CLIENT_ID" \
+  --auth-cognito-client-secret "YOUR_CLIENT_SECRET" \
+  --auth-cognito-domain "your-domain-prefix" \
+  --auth-cognito-region "us-east-2" \
+  --auth-cognito-scopes "scope1,scope2" \
+  --api-url "https://api.example.com"
+
+# Environment variables
+export AUTH_TYPE=cognito
+export AUTH_COGNITO_CLIENT_ID="YOUR_CLIENT_ID"
+export AUTH_COGNITO_CLIENT_SECRET="YOUR_CLIENT_SECRET" # pragma: allowlist secret
+export AUTH_COGNITO_DOMAIN="your-domain-prefix"
+export AUTH_COGNITO_REGION="us-east-2"
+export AUTH_COGNITO_SCOPES="scope1,scope2"  # Optional, comma-separated list of scopes
+python -m awslabs.openapi_mcp_server.server
+```
+
 ## Important Notes
 
 - **Bearer Authentication**: Requires a valid token. The server will exit gracefully with an error message if no token is provided.
 - **Basic Authentication**: Requires both username and password. The server will exit gracefully with an error message if either is missing.
 - **API Key Authentication**: Can be placed in a header (default), query parameter, or cookie.
-- **Cognito Authentication**: Requires client ID, username, and password. The password can be stored in the system environment variable `AUTH_COGNITO_PASSWORD` for security. Tokens are automatically refreshed when they expire.
+- **Cognito Authentication - Password Flow**: Requires client ID, username, and password. The password can be stored in the system environment variable `AUTH_COGNITO_PASSWORD` for security. Tokens are automatically refreshed when they expire.
   - **ID Token Usage**: The Cognito authentication provider uses the **ID Token** for authentication. This is consistent with the AWS CLI approach:
     ```bash
     # Get ID Token from Cognito and use it for authentication
@@ -95,6 +126,57 @@ python -m awslabs.openapi_mcp_server.server
     Support for using the Access Token will be added in a future release.
   - **User Pool ID**: Some Cognito configurations require a User Pool ID. If you encounter authentication errors, try providing the User Pool ID using `--auth-cognito-user-pool-id` or `AUTH_COGNITO_USER_POOL_ID`.
   - **Authentication Flows**: The provider automatically tries different authentication flows (USER_PASSWORD_AUTH and ADMIN_USER_PASSWORD_AUTH) based on your Cognito configuration.
+- **Cognito Authentication - OAuth 2.0 Client Credentials Flow**: Requires client ID, client secret, and domain. The client credentials flow is used for service-to-service authentication and does not require a user.
+  - **Domain**: The domain is required for client credentials flow. It's the domain prefix of your Cognito user pool (e.g., if your domain is `https://my-domain.auth.us-east-2.amazoncognito.com`, the domain prefix is `my-domain`).
+  - **Scopes**: Scopes are optional. If not provided, the server will use the default scopes configured for the client in Cognito. If provided, they should be a space-separated list of scopes (e.g., `scope1 scope2`).
+  - **Token Type**: The client credentials flow uses the **Access Token** for authentication, not the ID Token.
+
+## OAuth 2.0 and OpenID Connect Support
+
+The OpenAPI MCP Server supports OAuth 2.0 and OpenID Connect through the Cognito authentication provider with client credentials flow. This allows for secure service-to-service authentication without requiring a user.
+
+### OAuth 2.0 Client Credentials Flow
+
+The client credentials flow is designed for service-to-service authentication where a client application needs to access resources on its own behalf, not on behalf of a user. This flow is ideal for server-side applications that need to authenticate to APIs.
+
+#### How It Works
+
+1. The client application authenticates to the authorization server (Cognito) using its client ID and client secret.
+2. If the credentials are valid, the authorization server returns an access token.
+3. The client application uses the access token to authenticate to the API.
+4. The access token is automatically refreshed when it expires.
+
+#### Configuration
+
+To use the client credentials flow, you need to provide:
+
+- **Client ID**: The ID of the client application registered with Cognito.
+- **Client Secret**: The secret key of the client application.
+- **Domain**: The domain prefix of your Cognito user pool.
+- **Region**: The AWS region where your Cognito user pool is located.
+- **Scopes** (optional): The scopes to request for the access token.
+
+#### Example
+
+```bash
+export AUTH_TYPE=cognito
+export AUTH_COGNITO_CLIENT_ID="your-client-id"
+export AUTH_COGNITO_CLIENT_SECRET="your-client-secret" # pragma: allowlist secret
+export AUTH_COGNITO_DOMAIN="your-domain-prefix"
+export AUTH_COGNITO_REGION="us-east-2"
+export AUTH_COGNITO_SCOPES="scope1 scope2"  # Optional
+python -m awslabs.openapi_mcp_server.server
+```
+
+### OpenID Connect Support
+
+OpenID Connect is built on top of OAuth 2.0 and adds identity functionality. The client credentials flow in OpenID Connect works the same way as in OAuth 2.0, but with additional identity-related scopes and tokens.
+
+To use OpenID Connect features, include OpenID Connect scopes in your scope list:
+
+```bash
+export AUTH_COGNITO_SCOPES="api:read,api:write"
+```
 
 ## Error Handling
 
@@ -157,8 +239,11 @@ python test_basic_auth.py
 # Test API Key authentication
 python test_api_key_auth.py
 
-# Test Cognito authentication
+# Test Cognito authentication - Password Flow
 python test_cognito_auth.py --client-id "YOUR_CLIENT_ID" --username "username" --password "password" --user-pool-id "OPTIONAL_POOL_ID" --region "us-east-1"
+
+# Test Cognito authentication - Client Credentials Flow
+python test_cognito_auth.py --client-id "YOUR_CLIENT_ID" --client-secret "YOUR_CLIENT_SECRET" --domain "your-domain-prefix" --region "us-east-2" --scopes "scope1,scope2"
 
 # Run all authentication tests
 python -m pytest tests/auth/
@@ -189,6 +274,12 @@ This log message appears at the DEBUG level during initialization and shows:
 - **Password**: Whether a password is set (shows "SET" or "NOT SET", never the actual password)
 - **UserPoolID**: Whether a user pool ID is set (shows the ID or "NOT SET")
 
+For client credentials flow:
+
+```
+DEBUG | awslabs.openapi_mcp_server.auth.cognito_auth:__init__:50 - Cognito auth configuration: ClientID=client-id, Client Secret=SET, Domain=domain-prefix, Region=us-east-2
+```
+
 To enable these debug logs, run the server with `--log-level DEBUG`:
 
 ```bash
@@ -197,8 +288,10 @@ python -m awslabs.openapi_mcp_server.server --auth-type cognito --log-level DEBU
 
 Common Cognito authentication issues:
 
-1. **Missing credentials**: Check that all required parameters are set (client ID, username, password)
+1. **Missing credentials**: Check that all required parameters are set (client ID, username/password or client secret)
 2. **Invalid credentials**: Verify the credentials are correct in the AWS Cognito console
 3. **Expired token**: The server will automatically attempt to refresh expired tokens
 4. **User not confirmed**: Confirm the user in the AWS Cognito console
 5. **Missing User Pool ID**: Some Cognito configurations require a User Pool ID
+6. **Invalid domain**: For client credentials flow, ensure the domain prefix is correct
+7. **Invalid scopes**: For client credentials flow, ensure the requested scopes are allowed for the client
