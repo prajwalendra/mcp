@@ -393,7 +393,6 @@ def main():
         description='This project is a server that dynamically creates Model Context Protocol (MCP) tools and resources from OpenAPI specifications. It allows Large Language Models (LLMs) to interact with APIs through the Model Context Protocol.'
     )
     # Server configuration
-    parser.add_argument('--port', type=int, help='Port to run the server on')
     parser.add_argument(
         '--log-level',
         choices=['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL'],

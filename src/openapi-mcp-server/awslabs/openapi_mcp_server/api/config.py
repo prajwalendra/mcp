@@ -46,9 +46,9 @@ class Config:
     auth_cognito_region: str = 'us-east-1'
 
     # Server configuration
-    port: int = 8000
     # Default to localhost for security; use SERVER_HOST env var to override when needed (e.g. in Docker)
     host: str = '127.0.0.1'
+    port: int = 8000
     debug: bool = False
     transport: str = 'stdio'  # stdio only
     message_timeout: int = 60
@@ -96,8 +96,8 @@ def load_config(args: Any = None) -> Config:
         'AUTH_COGNITO_USER_POOL_ID': (lambda v: setattr(config, 'auth_cognito_user_pool_id', v)),
         'AUTH_COGNITO_REGION': (lambda v: setattr(config, 'auth_cognito_region', v)),
         # Server configuration
-        'SERVER_PORT': (lambda v: setattr(config, 'port', int(v))),
         'SERVER_HOST': (lambda v: setattr(config, 'host', v)),
+        'SERVER_PORT': (lambda v: setattr(config, 'port', int(v))),
         'SERVER_DEBUG': (lambda v: setattr(config, 'debug', v.lower() == 'true')),
         'SERVER_TRANSPORT': (lambda v: setattr(config, 'transport', v)),
         'SERVER_MESSAGE_TIMEOUT': (lambda v: setattr(config, 'message_timeout', int(v))),
@@ -194,7 +194,7 @@ def load_config(args: Any = None) -> Config:
 
     # Log final configuration details
     logger.info(
-        f'Configuration loaded: API name={config.api_name}, transport={config.transport}, port={config.port}'
+        f'Configuration loaded: API name={config.api_name}, transport={config.transport}'
     )
 
     return config
