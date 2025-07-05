@@ -6,22 +6,22 @@
 
 The OpenAPI MCP Server supports five authentication methods:
 
-| Method | Description | Required Parameters |
-|--------|-------------|---------------------|
-| **None** | No authentication (default) | None |
-| **Bearer** | Token-based authentication | `--auth-token` |
-| **Basic** | Username/password authentication | `--auth-username`, `--auth-password` |
-| **API Key** | API key authentication | `--auth-api-key`, `--auth-api-key-name`, `--auth-api-key-in` |
-| **Cognito** | AWS Cognito User Pool authentication | See below for details |
+| Method | Description | Required Parameters (CLI) | Environment Variables |
+|--------|-------------|---------------------|----------------------|
+| **None** | No authentication (default) | None | None |
+| **Bearer** | Token-based authentication | `--auth-token` | `AUTH_TOKEN` |
+| **Basic** | Username/password authentication | `--auth-username`, `--auth-password` | `AUTH_USERNAME`, `AUTH_PASSWORD` |
+| **API Key** | API key authentication | `--auth-api-key`, `--auth-api-key-name`, `--auth-api-key-in` | `AUTH_API_KEY`, `AUTH_API_KEY_NAME`, `AUTH_API_KEY_IN` |
+| **Cognito** | AWS Cognito User Pool authentication | See below for details | See below for details |
 
 ### Cognito Authentication Methods
 
 Cognito authentication supports two different flows:
 
-| Flow | Description | Required Parameters |
-|------|-------------|---------------------|
-| **Password Flow** | Username/password authentication | `--auth-cognito-client-id`, `--auth-cognito-username`, `--auth-cognito-password`, `--auth-cognito-user-pool-id` (optional) |
-| **Client Credentials Flow** | OAuth 2.0 client credentials flow for service-to-service authentication | `--auth-cognito-client-id`, `--auth-cognito-client-secret`, `--auth-cognito-domain`, `--auth-cognito-scopes` (optional) |
+| Flow | Description | Required Parameters (CLI) | Environment Variables |
+|------|-------------|---------------------|----------------------|
+| **Password Flow** | Username/password authentication | `--auth-cognito-client-id`, `--auth-cognito-username`, `--auth-cognito-password`, `--auth-cognito-user-pool-id` (optional) | `AUTH_COGNITO_CLIENT_ID`, `AUTH_COGNITO_USERNAME`, `AUTH_COGNITO_PASSWORD`, `AUTH_COGNITO_USER_POOL_ID` (optional) |
+| **Client Credentials Flow** | OAuth 2.0 client credentials flow for service-to-service authentication | `--auth-cognito-client-id`, `--auth-cognito-client-secret`, `--auth-cognito-domain`, `--auth-cognito-scopes` (optional) | `AUTH_COGNITO_CLIENT_ID`, `AUTH_COGNITO_CLIENT_SECRET`, `AUTH_COGNITO_DOMAIN`, `AUTH_COGNITO_SCOPES` (optional) |
 
 ## Quick Start Examples
 
@@ -29,45 +29,46 @@ Cognito authentication supports two different flows:
 
 ```bash
 # Command line
-python -m awslabs.openapi_mcp_server.server --auth-type bearer --auth-token "YOUR_TOKEN" --api-url "https://api.example.com"
+uvx awslabs.openapi-mcp-server --auth-type bearer --auth-token "YOUR_TOKEN" --api-url "https://api.example.com"
 
 # Environment variables
 export AUTH_TYPE=bearer
 export AUTH_TOKEN="YOUR_TOKEN"
-python -m awslabs.openapi_mcp_server.server
+uvx awslabs.openapi-mcp-server
 ```
 
 ### Basic Authentication
 
 ```bash
 # Command line
-python -m awslabs.openapi_mcp_server.server --auth-type basic --auth-username "user" --auth-password "pass" --api-url "https://api.example.com"
+uvx awslabs.openapi-mcp-server --auth-type basic --auth-username "user" --auth-password "pass" --api-url "https://api.example.com"
 
 # Environment variables
 export AUTH_TYPE=basic
 export AUTH_USERNAME="user"
 export AUTH_PASSWORD="pass"
-python -m awslabs.openapi_mcp_server.server
+uvx awslabs.openapi-mcp-server
 ```
 
 ### API Key Authentication
 
 ```bash
 # Command line
-python -m awslabs.openapi_mcp_server.server --auth-type api_key --auth-api-key "your-key" --auth-api-key-name "X-API-Key" --auth-api-key-in "header"
+uvx awslabs.openapi-mcp-server --auth-type api_key --auth-api-key "your-key" --auth-api-key-name "X-API-Key" --auth-api-key-in "header"
 
 # Environment variables
 export AUTH_TYPE=api_key
 export AUTH_API_KEY="your-key"
 export AUTH_API_KEY_NAME="X-API-Key"
 export AUTH_API_KEY_IN="header"  # Options: header, query, cookie
+uvx awslabs.openapi-mcp-server
 ```
 
 ### Cognito Authentication - Password Flow
 
 ```bash
 # Command line
-python -m awslabs.openapi_mcp_server.server --auth-type cognito \
+uvx awslabs.openapi-mcp-server --auth-type cognito \
   --auth-cognito-client-id "YOUR_CLIENT_ID" \
   --auth-cognito-username "username" \
   --auth-cognito-password "password" \
@@ -82,19 +83,19 @@ export AUTH_COGNITO_USERNAME="username"
 export AUTH_COGNITO_PASSWORD="password" # Can also be set in system environment
 export AUTH_COGNITO_USER_POOL_ID="OPTIONAL_POOL_ID"
 export AUTH_COGNITO_REGION="us-east-1"
-python -m awslabs.openapi_mcp_server.server
+uvx awslabs.openapi-mcp-server
 ```
 
 ### Cognito Authentication - OAuth 2.0 Client Credentials Flow
 
 ```bash
 # Command line
-python -m awslabs.openapi_mcp_server.server --auth-type cognito \
+uvx awslabs.openapi-mcp-server --auth-type cognito \
   --auth-cognito-client-id "YOUR_CLIENT_ID" \
   --auth-cognito-client-secret "YOUR_CLIENT_SECRET" \
   --auth-cognito-domain "your-domain-prefix" \
   --auth-cognito-region "us-east-2" \
-  --auth-cognito-scopes "scope1,scope2" \
+  --auth-cognito-scopes "scope1 scope2" \
   --api-url "https://api.example.com"
 
 # Environment variables
@@ -103,8 +104,8 @@ export AUTH_COGNITO_CLIENT_ID="YOUR_CLIENT_ID"
 export AUTH_COGNITO_CLIENT_SECRET="YOUR_CLIENT_SECRET"
 export AUTH_COGNITO_DOMAIN="your-domain-prefix"
 export AUTH_COGNITO_REGION="us-east-2"
-export AUTH_COGNITO_SCOPES="scope1,scope2"  # Optional, comma-separated list of scopes
-python -m awslabs.openapi_mcp_server.server
+export AUTH_COGNITO_SCOPES="scope1 scope2"  # Optional, space-separated list of scopes
+uvx awslabs.openapi-mcp-server
 ```
 
 ## Important Notes
@@ -128,7 +129,7 @@ python -m awslabs.openapi_mcp_server.server
   - **Authentication Flows**: The provider automatically tries different authentication flows (USER_PASSWORD_AUTH and ADMIN_USER_PASSWORD_AUTH) based on your Cognito configuration.
 - **Cognito Authentication - OAuth 2.0 Client Credentials Flow**: Requires client ID, client secret, and domain. The client credentials flow is used for service-to-service authentication and does not require a user.
   - **Domain**: The domain is required for client credentials flow. It's the domain prefix of your Cognito user pool (e.g., if your domain is `https://my-domain.auth.us-east-2.amazoncognito.com`, the domain prefix is `my-domain`).
-  - **Scopes**: Scopes are optional. If not provided, the server will use the default scopes configured for the client in Cognito. If provided, they should be a space-separated list of scopes (e.g., `scope1 scope2`).
+  - **Scopes**: Scopes are optional. If not provided, the server will use the default scopes configured for the client in Cognito. If provided, they should be a comma-separated list of scopes (e.g., `scope1,scope2`). The server will internally convert these to space-separated format as required by the OAuth 2.0 specification.
   - **Token Type**: The client credentials flow uses the **Access Token** for authentication, not the ID Token.
 
 ## OAuth 2.0 and OpenID Connect Support
@@ -165,7 +166,7 @@ export AUTH_COGNITO_CLIENT_SECRET="your-client-secret"
 export AUTH_COGNITO_DOMAIN="your-domain-prefix"
 export AUTH_COGNITO_REGION="us-east-2"
 export AUTH_COGNITO_SCOPES="scope1 scope2"  # Optional
-python -m awslabs.openapi_mcp_server.server
+uvx awslabs.openapi-mcp-server
 ```
 
 ### OpenID Connect Support
@@ -199,12 +200,14 @@ The authentication system implements caching to improve performance:
 
 ### Custom TTL Configuration
 
-You can configure the TTL (Time-To-Live) for authentication tokens:
+You can configure the cache TTL (Time-To-Live) for authentication data:
 
 ```bash
-# Set token TTL to 1 hour (3600 seconds)
-python -m awslabs.openapi_mcp_server.server --auth-type bearer --auth-token "YOUR_TOKEN" --auth-token-ttl 3600
+# Set authentication cache TTL to 1 hour (3600 seconds)
+uvx awslabs.openapi-mcp-server --auth-type bearer --auth-token "YOUR_TOKEN" --auth-token-ttl 3600
 ```
+
+Note: This setting controls how long the server caches authentication headers locally before regenerating them. It does not affect the actual expiration time of the token itself, which is determined by the authentication server that issued the token.
 
 ## System Architecture
 
@@ -225,29 +228,22 @@ The authentication system includes several optimizations:
 - **Secure Credential Handling**: Hashes sensitive data for cache keys
 - **Configurable TTL**: Allows fine-tuning cache duration based on security requirements
 
-## Testing
+## Verifying Authentication
 
-Test scripts are provided for authentication providers:
+To verify your authentication configuration is working correctly:
 
-```bash
-# Test Bearer authentication
-python test_bearer_auth.py
+1. Start the server with debug logging enabled:
+   ```bash
+   uvx awslabs.openapi-mcp-server --auth-type your_auth_type [your auth options] --log-level DEBUG
+   ```
 
-# Test Basic authentication
-python test_basic_auth.py
+2. Check the logs for successful authentication messages
+   
+3. Make a simple request through your LLM tool to verify API connectivity:
+   - For Amazon Q CLI: "Can you list the available endpoints in my API?"
+   - For Cline: "Make a simple request to my API to verify authentication is working"
 
-# Test API Key authentication
-python test_api_key_auth.py
-
-# Test Cognito authentication - Password Flow
-python test_cognito_auth.py --client-id "YOUR_CLIENT_ID" --username "username" --password "password" --user-pool-id "OPTIONAL_POOL_ID" --region "us-east-1"
-
-# Test Cognito authentication - Client Credentials Flow
-python test_cognito_auth.py --client-id "YOUR_CLIENT_ID" --client-secret "YOUR_CLIENT_SECRET" --domain "your-domain-prefix" --region "us-east-2" --scopes "scope1,scope2"
-
-# Run all authentication tests
-python -m pytest tests/auth/
-```
+If you encounter authentication errors, see the Troubleshooting section below.
 
 ## Troubleshooting
 
@@ -283,7 +279,7 @@ DEBUG | awslabs.openapi_mcp_server.auth.cognito_auth:__init__:50 - Cognito auth 
 To enable these debug logs, run the server with `--log-level DEBUG`:
 
 ```bash
-python -m awslabs.openapi_mcp_server.server --auth-type cognito --log-level DEBUG [other options]
+uvx awslabs.openapi-mcp-server --auth-type cognito --log-level DEBUG [other options]
 ```
 
 Common Cognito authentication issues:
@@ -295,3 +291,19 @@ Common Cognito authentication issues:
 5. **Missing User Pool ID**: Some Cognito configurations require a User Pool ID
 6. **Invalid domain**: For client credentials flow, ensure the domain prefix is correct
 7. **Invalid scopes**: For client credentials flow, ensure the requested scopes are allowed for the client
+## AWS Documentation References
+
+### Bearer Token Authentication
+- [Understanding JSON Web Tokens (JWTs)](https://docs.aws.amazon.com/cognito/latest/developerguide/amazon-cognito-user-pools-using-tokens-with-identity-providers.html)
+- [Using the ID token](https://docs.aws.amazon.com/cognito/latest/developerguide/amazon-cognito-user-pools-using-tokens-with-identity-providers.html#amazon-cognito-user-pools-using-the-id-token)
+
+### Cognito Authentication - Password Flow
+- [User Pool Authentication Flow](https://docs.aws.amazon.com/cognito/latest/developerguide/amazon-cognito-user-pools-authentication-flow.html)
+- [Using the AWS CLI with Cognito User Pools](https://docs.aws.amazon.com/cli/latest/reference/cognito-idp/index.html)
+- [Initiating Auth with the AWS CLI](https://docs.aws.amazon.com/cli/latest/reference/cognito-idp/initiate-auth.html)
+
+### Cognito Authentication - OAuth 2.0 Client Credentials Flow
+- [Token Endpoint](https://docs.aws.amazon.com/cognito/latest/developerguide/token-endpoint.html)
+- [Using the Client Credentials Grant](https://docs.aws.amazon.com/cognito/latest/developerguide/token-endpoint.html#client-credentials)
+- [Setting up a User Pool App Client](https://docs.aws.amazon.com/cognito/latest/developerguide/user-pool-settings-client-apps.html)
+- [Resource Server and Scopes](https://docs.aws.amazon.com/cognito/latest/developerguide/cognito-user-pools-define-resource-servers.html)
