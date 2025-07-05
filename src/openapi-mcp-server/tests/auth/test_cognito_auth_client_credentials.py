@@ -1,12 +1,12 @@
 """Tests for the Cognito authentication provider client credentials flow."""
 
-import pytest
-import time
 import base64
 import json
+import pytest
+import time
 from awslabs.openapi_mcp_server.api.config import Config
-from awslabs.openapi_mcp_server.auth.cognito_auth import CognitoAuthProvider
 from awslabs.openapi_mcp_server.auth.auth_errors import InvalidCredentialsError
+from awslabs.openapi_mcp_server.auth.cognito_auth import CognitoAuthProvider
 from unittest.mock import MagicMock, patch
 
 
@@ -33,10 +33,7 @@ class TestCognitoAuthClientCredentials:
         # Mock successful response
         mock_response = MagicMock()
         mock_response.status_code = 200
-        mock_response.json.return_value = {
-            'access_token': 'test_access_token',
-            'expires_in': 3600
-        }
+        mock_response.json.return_value = {'access_token': 'test_access_token', 'expires_in': 3600}
         mock_post.return_value = mock_response
 
         # Create provider instance without calling __init__
@@ -71,10 +68,7 @@ class TestCognitoAuthClientCredentials:
         # Mock successful response
         mock_response = MagicMock()
         mock_response.status_code = 200
-        mock_response.json.return_value = {
-            'access_token': 'test_access_token',
-            'expires_in': 3600
-        }
+        mock_response.json.return_value = {'access_token': 'test_access_token', 'expires_in': 3600}
         mock_post.return_value = mock_response
 
         # Create provider instance without calling __init__
@@ -183,23 +177,23 @@ class TestCognitoAuthClientCredentials:
         # Create a valid JWT token with expiry
         header = {'alg': 'HS256', 'typ': 'JWT'}
         payload = {'exp': int(time.time()) + 3600}  # 1 hour from now
-        
+
         # Encode header and payload
         header_json = json.dumps(header).encode()
         header_b64 = base64.urlsafe_b64encode(header_json).decode().rstrip('=')
-        
+
         payload_json = json.dumps(payload).encode()
         payload_b64 = base64.urlsafe_b64encode(payload_json).decode().rstrip('=')
-        
+
         # Create token (without signature for simplicity)
-        token = f"{header_b64}.{payload_b64}.signature"
-        
+        token = f'{header_b64}.{payload_b64}.signature'
+
         # Create provider instance without calling __init__
         provider = CognitoAuthProvider.__new__(CognitoAuthProvider)
-        
+
         # Extract expiry
         expiry = provider._extract_token_expiry(token)
-        
+
         # Verify expiry matches what we set
         assert expiry == payload['exp']
 
@@ -207,10 +201,10 @@ class TestCognitoAuthClientCredentials:
         """Test extracting expiry from an invalid token."""
         # Create provider instance without calling __init__
         provider = CognitoAuthProvider.__new__(CognitoAuthProvider)
-        
+
         # Extract expiry from invalid token
-        expiry = provider._extract_token_expiry("invalid.token.format")
-        
+        expiry = provider._extract_token_expiry('invalid.token.format')
+
         # Verify default expiry is returned (1 hour from now)
         assert expiry > int(time.time())
         assert expiry <= int(time.time()) + 3601  # Allow 1 second for execution time
@@ -218,14 +212,14 @@ class TestCognitoAuthClientCredentials:
     def test_extract_token_expiry_malformed_payload(self):
         """Test extracting expiry from a token with malformed payload."""
         # Create a token with invalid base64 in payload
-        token = "header.not_valid_base64.signature"
-        
+        token = 'header.not_valid_base64.signature'
+
         # Create provider instance without calling __init__
         provider = CognitoAuthProvider.__new__(CognitoAuthProvider)
-        
+
         # Extract expiry
         expiry = provider._extract_token_expiry(token)
-        
+
         # Verify default expiry is returned
         assert expiry > int(time.time())
         assert expiry <= int(time.time()) + 3601  # Allow 1 second for execution time
@@ -234,32 +228,32 @@ class TestCognitoAuthClientCredentials:
         """Test grant type determination logic."""
         # Create provider instance without calling __init__
         provider = CognitoAuthProvider.__new__(CognitoAuthProvider)
-        
+
         # Test client credentials flow
         provider._client_id = 'test_client_id'
         provider._client_secret = 'test_client_secret'
         provider._domain = 'test-domain'
         provider._username = None
         provider._password = None
-        
+
         assert provider._determine_grant_type() == 'client_credentials'
-        
+
         # Test password flow
         provider._client_id = 'test_client_id'
         provider._client_secret = None
         provider._domain = None
         provider._username = 'test_user'
         provider._password = 'test_password'
-        
+
         assert provider._determine_grant_type() == 'password'
-        
+
         # Test default to password flow
         provider._client_id = 'test_client_id'
         provider._client_secret = None
         provider._domain = None
         provider._username = None
         provider._password = None
-        
+
         assert provider._determine_grant_type() == 'password'
 
     @patch('requests.post')
@@ -269,10 +263,7 @@ class TestCognitoAuthClientCredentials:
         # Mock successful response
         mock_response = MagicMock()
         mock_response.status_code = 200
-        mock_response.json.return_value = {
-            'access_token': 'test_access_token',
-            'expires_in': 3600
-        }
+        mock_response.json.return_value = {'access_token': 'test_access_token', 'expires_in': 3600}
         mock_post.return_value = mock_response
 
         # Create provider instance without calling __init__
@@ -288,11 +279,13 @@ class TestCognitoAuthClientCredentials:
         provider._password = None
 
         # Mock _get_token_client_credentials and _get_token_password
-        with patch.object(provider, '_get_token_client_credentials', return_value='test_token') as mock_client_creds:
+        with patch.object(
+            provider, '_get_token_client_credentials', return_value='test_token'
+        ) as mock_client_creds:
             with patch.object(provider, '_get_token_password') as mock_password:
                 # Call the method
                 token = provider._get_cognito_token()
-                
+
                 # Verify the correct method was called
                 mock_client_creds.assert_called_once()
                 mock_password.assert_not_called()
@@ -316,10 +309,12 @@ class TestCognitoAuthClientCredentials:
 
         # Mock _get_token_client_credentials and _get_token_password
         with patch.object(provider, '_get_token_client_credentials') as mock_client_creds:
-            with patch.object(provider, '_get_token_password', return_value='test_token') as mock_password:
+            with patch.object(
+                provider, '_get_token_password', return_value='test_token'
+            ) as mock_password:
                 # Call the method
                 token = provider._get_cognito_token()
-                
+
                 # Verify the correct method was called
                 mock_client_creds.assert_not_called()
                 mock_password.assert_called_once()

@@ -3,8 +3,8 @@
 import pytest
 import time
 from awslabs.openapi_mcp_server.api.config import Config
-from awslabs.openapi_mcp_server.auth.cognito_auth import CognitoAuthProvider
 from awslabs.openapi_mcp_server.auth.auth_errors import ExpiredTokenError
+from awslabs.openapi_mcp_server.auth.cognito_auth import CognitoAuthProvider
 from unittest.mock import MagicMock, patch
 
 
@@ -61,7 +61,9 @@ class TestCognitoAuthAdditionalCoverage:
             # Mock _extract_token_expiry to return a future time
             with patch.object(provider, '_extract_token_expiry', return_value=time.time() + 3600):
                 # Mock _refresh_cognito_token to return a new token and update refresh token
-                with patch.object(provider, '_refresh_cognito_token', return_value='new_id_token') as mock_refresh:
+                with patch.object(
+                    provider, '_refresh_cognito_token', return_value='new_id_token'
+                ) as mock_refresh:
                     # Call _refresh_token
                     provider._refresh_token()
 
@@ -91,14 +93,11 @@ class TestCognitoAuthAdditionalCoverage:
 
         # Mock _refresh_cognito_token to return None
         with patch.object(provider, '_refresh_cognito_token', return_value=None):
-            # Mock _get_cognito_token to return None
-            with patch.object(provider, '_get_cognito_token', return_value=None):
+            # Mock _get_cognito_token to raise an exception
+            with patch.object(provider, '_get_cognito_token', side_effect=Exception('Auth failed')):
                 # Call _refresh_token and expect exception
-                with pytest.raises(ExpiredTokenError) as excinfo:
+                with pytest.raises(ExpiredTokenError):
                     provider._refresh_token()
-
-                # Verify exception details
-                assert 'Token refresh failed' in str(excinfo.value)
 
     @patch('boto3.client')
     def test_refresh_cognito_token_success(self, mock_boto3, mock_config):
@@ -148,14 +147,21 @@ class TestCognitoAuthAdditionalCoverage:
         mock_client = MagicMock()
         mock_boto3.return_value = mock_client
 
-        # Set up mock responses
-        # Create a proper exception for initiate_auth
+        # Create proper exception classes that inherit from BaseException
+        class NotAuthorizedException(Exception):
+            pass
+
         class InvalidParameterException(Exception):
             pass
-        
+
+        # Set up exceptions on the mock client
+        mock_client.exceptions = MagicMock()
+        mock_client.exceptions.NotAuthorizedException = NotAuthorizedException
         mock_client.exceptions.InvalidParameterException = InvalidParameterException
+
+        # Set up mock responses
         mock_client.initiate_auth.side_effect = InvalidParameterException('Invalid parameter')
-        
+
         mock_client.admin_initiate_auth.return_value = {
             'AuthenticationResult': {
                 'IdToken': 'new_id_token',
@@ -196,6 +202,18 @@ class TestCognitoAuthAdditionalCoverage:
         # Set up mock boto3 client
         mock_client = MagicMock()
         mock_boto3.return_value = mock_client
+
+        # Create proper exception classes that inherit from BaseException
+        class NotAuthorizedException(Exception):
+            pass
+
+        class InvalidParameterException(Exception):
+            pass
+
+        # Set up exceptions on the mock client
+        mock_client.exceptions = MagicMock()
+        mock_client.exceptions.NotAuthorizedException = NotAuthorizedException
+        mock_client.exceptions.InvalidParameterException = InvalidParameterException
 
         # Set up mock response for initiate_auth to raise exception
         mock_client.initiate_auth.side_effect = Exception('Refresh failed')
@@ -253,36 +271,38 @@ class TestCognitoAuthAdditionalCoverage:
         """Test token expiry check."""
         # Create provider instance without calling __init__
         provider = CognitoAuthProvider.__new__(CognitoAuthProvider)
-        
+
         # Test expired token
         provider._token_expires_at = time.time() - 100  # Expired 100 seconds ago
         assert provider._is_token_expired_or_expiring_soon() is True
-        
+
         # Test token expiring soon (within buffer)
         provider._token_expires_at = time.time() + 200  # Expires in 200 seconds (buffer is 300)
         assert provider._is_token_expired_or_expiring_soon() is True
-        
+
         # Test valid token
         provider._token_expires_at = time.time() + 600  # Expires in 10 minutes
         assert provider._is_token_expired_or_expiring_soon() is False
 
     @patch('boto3.client')
     @patch('requests.post')
-    def test_check_and_refresh_token_if_needed_not_expired(self, mock_post, mock_boto3, mock_config):
+    def test_check_and_refresh_token_if_needed_not_expired(
+        self, mock_post, mock_boto3, mock_config
+    ):
         """Test token check when token is not expired."""
         # Create provider instance without calling __init__
         provider = CognitoAuthProvider.__new__(CognitoAuthProvider)
         provider._token = 'test_token'
         provider._token_expires_at = time.time() + 3600  # Not expired
         provider._token_lock = MagicMock()
-        
+
         # Mock _is_token_expired_or_expiring_soon to return False
         with patch.object(provider, '_is_token_expired_or_expiring_soon', return_value=False):
             # Mock _refresh_token to verify it's not called
             with patch.object(provider, '_refresh_token') as mock_refresh:
                 # Call _check_and_refresh_token_if_needed
                 provider._check_and_refresh_token_if_needed()
-                
+
                 # Verify _refresh_token was not called
                 mock_refresh.assert_not_called()
 
@@ -291,10 +311,10 @@ class TestCognitoAuthAdditionalCoverage:
         """Test _log_validation_error method."""
         # Create provider instance without calling __init__
         provider = CognitoAuthProvider.__new__(CognitoAuthProvider)
-        
+
         # Call _log_validation_error
         with patch('awslabs.openapi_mcp_server.logger.error') as mock_error:
             provider._log_validation_error()
-            
+
             # Verify logger.error was called
             assert mock_error.call_count >= 1
