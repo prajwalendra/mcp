@@ -51,7 +51,12 @@ nav:
     - Amazon ElastiCache/MemoryDB for Valkey MCP Server: servers/valkey-mcp-server.md
     - Amazon ElastiCache for Memcached MCP Server: servers/memcached-mcp-server.md
     - Git Repo Research MCP Server: servers/git-repo-research-mcp-server.md
-    - OpenAPI MCP Server: servers/openapi-mcp-server.md
+    - OpenAPI MCP Server:
+        - Overview: servers/openapi-mcp-server.md
+        - Authentication: servers/openapi-mcp-server/authentication.md
+        - Deployment: servers/openapi-mcp-server/deployment.md
+        - Observability: servers/openapi-mcp-server/observability.md
+        - Configuration: servers/openapi-mcp-server/configuration.md
     - CloudFormation MCP Server: servers/cfn-mcp-server.md
     - AWS Serverless MCP Server: servers/aws-serverless-mcp-server.md
     - Finch MCP Server: servers/finch-mcp-server.md
