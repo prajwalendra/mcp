@@ -21,6 +21,7 @@ This project is a server that dynamically creates Model Context Protocol (MCP) t
 - **OpenAPI Support**: Works with OpenAPI 3.x specifications in JSON or YAML format
 - **OpenAPI Specification Validation**: Validates specifications without failing startup if issues detected, logging warnings instead to work with specs having minor issues or non-standard extensions
 - **Authentication Support**: Supports multiple authentication methods (Basic, Bearer Token, API Key, Cognito)
+  - **OAuth 2.0 and OpenID Connect**: Supports client credentials flow for service-to-service authentication
 - **AWS Best Practices**: Implements AWS best practices for caching, resilience, and observability
 - **Comprehensive Testing**: Includes extensive unit and integration tests with high code coverage
 - **Metrics Collection**: Tracks API calls, tool usage, errors, and performance metrics
@@ -72,12 +73,41 @@ Here are some ways you can work with MCP across AWS (e.g. for Amazon Q Developer
       "env": {
         "API_NAME": "your-api-name",
         "API_BASE_URL": "https://api.example.com",
-          "API_SPEC_URL": "https://api.example.com/openapi.json",
-          "LOG_LEVEL": "ERROR",
-          "ENABLE_PROMETHEUS": "false",
-          "ENABLE_OPERATION_PROMPTS": "true",
-          "UVICORN_TIMEOUT_GRACEFUL_SHUTDOWN": "5.0",
-          "UVICORN_GRACEFUL_SHUTDOWN": "true"
+        "API_SPEC_URL": "https://api.example.com/openapi.json",
+        "LOG_LEVEL": "ERROR",
+        "ENABLE_PROMETHEUS": "false",
+        "ENABLE_OPERATION_PROMPTS": "true",
+        "UVICORN_TIMEOUT_GRACEFUL_SHUTDOWN": "5.0",
+        "UVICORN_GRACEFUL_SHUTDOWN": "true"
+      },
+      "disabled": false,
+      "autoApprove": []
+    }
+  }
+}
+```
+
+### MCP Configuration with OAuth 2.0
+
+For APIs that require OAuth 2.0 authentication with client credentials flow:
+
+```json
+{
+  "mcpServers": {
+    "awslabs.openapi-mcp-server": {
+      "command": "uvx",
+      "args": ["awslabs.openapi-mcp-server@latest"],
+      "env": {
+        "API_NAME": "oauth-api",
+        "API_BASE_URL": "https://api.example.com",
+        "API_SPEC_URL": "https://api.example.com/openapi.json",
+        "AUTH_TYPE": "cognito",
+        "AUTH_COGNITO_CLIENT_ID": "your-client-id",
+        "AUTH_COGNITO_CLIENT_SECRET": "your-client-secret", # pragma: allowlist secret
+        "AUTH_COGNITO_DOMAIN": "your-domain-prefix",
+        "AUTH_COGNITO_REGION": "us-east-2",
+        "AUTH_COGNITO_SCOPES": "scope1,scope2",
+        "LOG_LEVEL": "INFO"
       },
       "disabled": false,
       "autoApprove": []
@@ -113,6 +143,9 @@ awslabs.openapi-mcp-server --api-url https://api.example.com --spec-url https://
 
 # API Key Authentication (in header)
 awslabs.openapi-mcp-server --api-url https://api.example.com --spec-url https://api.example.com/openapi.json --auth-type api_key --auth-api-key YOUR_API_KEY --auth-api-key-name X-API-Key --auth-api-key-in header # pragma: allowlist secret
+
+# Cognito Authentication with OAuth 2.0 Client Credentials Flow
+awslabs.openapi-mcp-server --api-url https://api.example.com --spec-url https://api.example.com/openapi.json --auth-type cognito --auth-cognito-client-id YOUR_CLIENT_ID --auth-cognito-client-secret YOUR_CLIENT_SECRET --auth-cognito-domain YOUR_DOMAIN --auth-cognito-region us-east-2 --auth-cognito-scopes "scope1,scope2" # pragma: allowlist secret
 ```
 
 For detailed information about authentication methods, configuration options, and examples, see [AUTHENTICATION.md](AUTHENTICATION.md).
@@ -312,31 +345,105 @@ To test the OpenAPI MCP Server with Amazon Q, you need to configure Amazon Q to 
    nano ~/.aws/amazonq/mcp.json
    ```
 
-   Add the following configuration:
+   Add one of the following configurations:
 
    ```json
    {
      "mcpServers": {
-       "awslabs.openapi-mcp-server": {
-         "command": "python",
-         "args": ["-m", "awslabs.openapi_mcp_server"],
-         "cwd": "/path/to/your/openapi-mcp-server",
+       "petstore-mcp-server": {
+         "command": "uvx",
+         "args": ["awslabs.openapi-mcp-server@latest"],
          "env": {
            "API_NAME": "petstore",
            "API_BASE_URL": "https://petstore3.swagger.io/api/v3",
            "API_SPEC_URL": "https://petstore3.swagger.io/api/v3/openapi.json",
            "LOG_LEVEL": "INFO",
-           "ENABLE_PROMETHEUS": "false",
-           "ENABLE_OPERATION_PROMPTS": "true",
-           "UVICORN_TIMEOUT_GRACEFUL_SHUTDOWN": "5.0",
-           "UVICORN_GRACEFUL_SHUTDOWN": "true",
-           "PYTHONPATH": "/path/to/your/openapi-mcp-server"
+           "ENABLE_OPERATION_PROMPTS": "true"
+         },
+         "disabled": false,
+         "autoApprove": []
+       },
+       "restaurants-menu-server": {
+         "command": "uvx",
+         "args": ["awslabs.openapi-mcp-server@latest"],
+         "env": {
+           "API_NAME": "restaurants-api",
+           "API_BASE_URL": "https://api.example.com/restaurants",
+           "API_SPEC_URL": "https://api.example.com/restaurants/openapi.json",
+           "AUTH_TYPE": "bearer",
+           "AUTH_TOKEN": "YOUR_API_TOKEN",
+           "LOG_LEVEL": "INFO"
+         },
+         "disabled": false,
+         "autoApprove": []
+       },
+       "zenithstays-reservations-server": {
+         "command": "uvx",
+         "args": ["awslabs.openapi-mcp-server@latest"],
+         "env": {
+           "API_NAME": "zenithstays-api",
+           "API_BASE_URL": "https://api.zenithstays.com",
+           "API_SPEC_URL": "https://api.zenithstays.com/openapi.json",
+           "AUTH_TYPE": "cognito",
+           "AUTH_COGNITO_CLIENT_ID": "your-client-id",
+           "AUTH_COGNITO_CLIENT_SECRET": "your-client-secret", # pragma: allowlist secret
+           "AUTH_COGNITO_DOMAIN": "zenith-stays-dev",
+           "AUTH_COGNITO_REGION": "us-east-2",
+           "AUTH_COGNITO_SCOPES": "zenithstays/reservations:read,zenithstays/reservations:write",
+           "LOG_LEVEL": "INFO"
          },
          "disabled": false,
          "autoApprove": []
        }
      }
    }
+   ```
+
+   > **Note**: ZenithStays is used here as an example API deployed on API Gateway. Replace with your actual API details when configuring the server.
+   ```
+
+### Troubleshooting Certificate Issues
+
+When running the server with Cognito authentication through desktop clients like Amazon Q CLI, Claude Desktop, or GitHub Copilot in Visual Studio Code on macOS, you might encounter SSL certificate verification issues. This is because these applications may not use the system's certificate store by default.
+
+To resolve certificate issues, add the following environment variables to your MCP configuration:
+
+```json
+{
+  "mcpServers": {
+    "zenithstays-reservations-server": {
+      "command": "uvx",
+      "args": ["awslabs.openapi-mcp-server@latest"],
+      "env": {
+        "API_NAME": "zenithstays-api",
+        "API_BASE_URL": "https://api.zenithstays.com",
+        "API_SPEC_URL": "https://api.zenithstays.com/openapi.json",
+        "AUTH_TYPE": "cognito",
+        "AUTH_COGNITO_CLIENT_ID": "your-client-id",
+        "AUTH_COGNITO_CLIENT_SECRET": "your-client-secret", # pragma: allowlist secret
+        "AUTH_COGNITO_DOMAIN": "zenith-stays-dev",
+        "AUTH_COGNITO_REGION": "us-east-2",
+        "AUTH_COGNITO_SCOPES": "zenithstays/reservations:read,zenithstays/reservations:write",
+        "LOG_LEVEL": "INFO",
+        "SSL_CERT_FILE": "/opt/homebrew/etc/openssl@3/cert.pem",
+        "REQUESTS_CA_BUNDLE": "/opt/homebrew/etc/openssl@3/cert.pem"
+      },
+      "disabled": false,
+      "autoApprove": []
+    }
+  }
+}
+```
+
+> **Note**: ZenithStays is used here as an example API deployed on API Gateway. Replace with your actual API details when configuring the server.
+
+The path to the certificate file may vary depending on your macOS setup:
+
+- For Homebrew installations: `/opt/homebrew/etc/openssl@3/cert.pem`
+- For older Homebrew installations: `/usr/local/etc/openssl@3/cert.pem`
+- You can also use: `/etc/ssl/cert.pem`
+
+These environment variables ensure that the Python requests library and other SSL-dependent libraries can find the correct certificate authorities.
    ```
 
 2. **Start Amazon Q CLI**

@@ -223,6 +223,7 @@ class TestCognitoAuthProvider(unittest.TestCase):
         provider._client_id = 'test_client_id'
         provider._user_pool_id = ''  # Empty string instead of None
         provider._region = 'us-east-1'
+        provider._grant_type = 'password'  # Add grant type
 
         # Create exception classes that inherit from Exception
         class NotAuthorizedException(Exception):
@@ -277,6 +278,7 @@ class TestCognitoAuthProvider(unittest.TestCase):
         provider._client_id = 'test_client_id'
         provider._user_pool_id = 'test_user_pool_id'
         provider._region = 'us-east-1'
+        provider._grant_type = 'password'  # Add grant type
 
         # Create exception classes that inherit from Exception
         class NotAuthorizedException(Exception):
@@ -331,6 +333,7 @@ class TestCognitoAuthProvider(unittest.TestCase):
         provider._client_id = 'test_client_id'
         provider._user_pool_id = 'test_user_pool_id'
         provider._region = 'us-east-1'
+        provider._grant_type = 'password'  # Add grant type
 
         # Create exception classes that inherit from Exception
         class NotAuthorizedException(Exception):
@@ -387,6 +390,7 @@ class TestCognitoAuthProvider(unittest.TestCase):
         provider._client_id = 'test_client_id'
         provider._user_pool_id = ''  # Empty string instead of None
         provider._region = 'us-east-1'
+        provider._grant_type = 'password'  # Add grant type
 
         # Create exception classes that inherit from Exception
         class NotAuthorizedException(Exception):
@@ -430,6 +434,7 @@ class TestCognitoAuthProvider(unittest.TestCase):
         provider._refresh_token_value = 'test_refresh_token'
         provider._user_pool_id = ''  # Empty string instead of None
         provider._region = 'us-east-1'
+        provider._grant_type = 'password'  # Add grant type
 
         # Create exception classes that inherit from Exception
         class NotAuthorizedException(Exception):
@@ -479,6 +484,7 @@ class TestCognitoAuthProvider(unittest.TestCase):
         provider._refresh_token_value = 'test_refresh_token'
         provider._user_pool_id = 'test_user_pool_id'
         provider._region = 'us-east-1'
+        provider._grant_type = 'password'  # Add grant type
 
         # Create exception classes that inherit from Exception
         class NotAuthorizedException(Exception):
@@ -526,6 +532,7 @@ class TestCognitoAuthProvider(unittest.TestCase):
         provider._refresh_token_value = 'test_refresh_token'
         provider._user_pool_id = ''  # Empty string instead of None
         provider._region = 'us-east-1'
+        provider._grant_type = 'password'  # Add grant type
 
         # Create exception classes that inherit from Exception
         class NotAuthorizedException(Exception):
@@ -563,6 +570,7 @@ class TestCognitoAuthProvider(unittest.TestCase):
         provider._refresh_token_value = 'test_refresh_token'
         provider._user_pool_id = ''  # Empty string instead of None
         provider._region = 'us-east-1'
+        provider._grant_type = 'password'  # Add grant type
 
         # Create exception classes that inherit from Exception
         class NotAuthorizedException(Exception):
