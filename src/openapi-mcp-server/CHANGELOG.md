@@ -11,24 +11,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - OAuth 2.0 and OpenID Connect support through Cognito authentication
   - Client credentials grant flow for service-to-service authentication
   - Support for custom scopes with optional scope parameter
-  - Standard OAuth 2.0 token endpoint format
   - Automatic token refresh for improved reliability
   - Comprehensive error handling with clear guidance
-  - Backward compatibility with password flow
 
 ### Improved
-- Documentation enhancements
-  - Restructured README.md for better readability and user experience
-  - Added Cline Marketplace integration instructions
-  - Updated authentication examples to use uvx consistently
-  - Added environment variables to authentication method tables
-  - Clarified authentication caching and TTL configuration
-  - Replaced testing section with practical verification steps
-  - Added AWS Cognito documentation references
+- Enhanced documentation structure and readability
+- Added Cline Marketplace integration instructions
+- Updated authentication examples for consistency
+- Added environment variables reference for authentication methods
+- Clarified authentication caching behavior and configuration
 
-### Fixed
+### Changed
+- Standardized command examples to use uvx consistently
 - Removed unused port configuration
-- Fixed inconsistencies in scope format documentation
 
 ## [0.1.0] - 2025-05-15
 
