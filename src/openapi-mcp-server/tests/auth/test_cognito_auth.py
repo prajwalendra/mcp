@@ -596,6 +596,8 @@ class TestCognitoAuthProvider(unittest.TestCase):
                 # in the _refresh_token method
                 token = provider._refresh_cognito_token()
                 self.assertIsNone(token)
+
+
 class TestCognitoAuthProviderHeaders(unittest.TestCase):
     """Tests for the Cognito authentication provider headers methods."""
 
@@ -619,7 +621,9 @@ class TestCognitoAuthProviderHeaders(unittest.TestCase):
         provider._is_valid = False
         provider._token_lock = MagicMock()
         provider._auth_headers = None
-        provider._token_expires_at = float('inf')  # Set to infinity to avoid expiration check issues
+        provider._token_expires_at = float(
+            'inf'
+        )  # Set to infinity to avoid expiration check issues
 
         # Test the method - should return empty dict when _is_valid is False
         headers = provider.get_auth_headers()

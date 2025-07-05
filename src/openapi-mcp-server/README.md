@@ -103,7 +103,7 @@ For APIs that require OAuth 2.0 authentication with client credentials flow:
         "API_SPEC_URL": "https://api.example.com/openapi.json",
         "AUTH_TYPE": "cognito",
         "AUTH_COGNITO_CLIENT_ID": "your-client-id",
-        "AUTH_COGNITO_CLIENT_SECRET": "your-client-secret", # pragma: allowlist secret
+        "AUTH_COGNITO_CLIENT_SECRET": "your-client-secret",
         "AUTH_COGNITO_DOMAIN": "your-domain-prefix",
         "AUTH_COGNITO_REGION": "us-east-2",
         "AUTH_COGNITO_SCOPES": "scope1,scope2",
@@ -136,16 +136,16 @@ awslabs.openapi-mcp-server --api-name myapi --api-url https://api.example.com --
 
 ```bash
 # Basic Authentication
-awslabs.openapi-mcp-server --api-url https://api.example.com --spec-url https://api.example.com/openapi.json --auth-type basic --auth-username YOUR_USERNAME --auth-password YOUR_PASSWORD # pragma: allowlist secret
+awslabs.openapi-mcp-server --api-url https://api.example.com --spec-url https://api.example.com/openapi.json --auth-type basic --auth-username YOUR_USERNAME --auth-password YOUR_PASSWORD
 
 # Bearer Token Authentication
-awslabs.openapi-mcp-server --api-url https://api.example.com --spec-url https://api.example.com/openapi.json --auth-type bearer --auth-token YOUR_TOKEN # pragma: allowlist secret
+awslabs.openapi-mcp-server --api-url https://api.example.com --spec-url https://api.example.com/openapi.json --auth-type bearer --auth-token YOUR_TOKEN
 
 # API Key Authentication (in header)
-awslabs.openapi-mcp-server --api-url https://api.example.com --spec-url https://api.example.com/openapi.json --auth-type api_key --auth-api-key YOUR_API_KEY --auth-api-key-name X-API-Key --auth-api-key-in header # pragma: allowlist secret
+awslabs.openapi-mcp-server --api-url https://api.example.com --spec-url https://api.example.com/openapi.json --auth-type api_key --auth-api-key YOUR_API_KEY --auth-api-key-name X-API-Key --auth-api-key-in header
 
 # Cognito Authentication with OAuth 2.0 Client Credentials Flow
-awslabs.openapi-mcp-server --api-url https://api.example.com --spec-url https://api.example.com/openapi.json --auth-type cognito --auth-cognito-client-id YOUR_CLIENT_ID --auth-cognito-client-secret YOUR_CLIENT_SECRET --auth-cognito-domain YOUR_DOMAIN --auth-cognito-region us-east-2 --auth-cognito-scopes "scope1,scope2" # pragma: allowlist secret
+awslabs.openapi-mcp-server --api-url https://api.example.com --spec-url https://api.example.com/openapi.json --auth-type cognito --auth-cognito-client-id YOUR_CLIENT_ID --auth-cognito-client-secret YOUR_CLIENT_SECRET --auth-cognito-domain YOUR_DOMAIN --auth-cognito-region us-east-2 --auth-cognito-scopes "scope1,scope2"
 ```
 
 For detailed information about authentication methods, configuration options, and examples, see [AUTHENTICATION.md](AUTHENTICATION.md).
@@ -220,10 +220,10 @@ export API_SPEC_PATH="/path/to/local/openapi.json"  # Optional: local file path
 
 # Authentication configuration
 export AUTH_TYPE="none"  # Options: none, basic, bearer, api_key
-export AUTH_USERNAME="PLACEHOLDER_USERNAME"  # For basic authentication # pragma: allowlist secret
-export AUTH_PASSWORD="PLACEHOLDER_PASSWORD"  # For basic authentication # pragma: allowlist secret
-export AUTH_TOKEN="PLACEHOLDER_TOKEN"  # For bearer token authentication # pragma: allowlist secret
-export AUTH_API_KEY="PLACEHOLDER_API_KEY"  # For API key authentication # pragma: allowlist secret
+export AUTH_USERNAME="PLACEHOLDER_USERNAME"  # For basic authentication
+export AUTH_PASSWORD="PLACEHOLDER_PASSWORD"  # For basic authentication
+export AUTH_TOKEN="PLACEHOLDER_TOKEN"  # For bearer token authentication
+export AUTH_API_KEY="PLACEHOLDER_API_KEY"  # For API key authentication
 export AUTH_API_KEY_NAME="X-API-Key"  # Name of the API key (default: api_key)
 export AUTH_API_KEY_IN="header"  # Where to place the API key (options: header, query, cookie)
 ```
@@ -386,7 +386,7 @@ To test the OpenAPI MCP Server with Amazon Q, you need to configure Amazon Q to 
            "API_SPEC_URL": "https://api.zenithstays.com/openapi.json",
            "AUTH_TYPE": "cognito",
            "AUTH_COGNITO_CLIENT_ID": "your-client-id",
-           "AUTH_COGNITO_CLIENT_SECRET": "your-client-secret", # pragma: allowlist secret
+           "AUTH_COGNITO_CLIENT_SECRET": "your-client-secret",
            "AUTH_COGNITO_DOMAIN": "zenith-stays-dev",
            "AUTH_COGNITO_REGION": "us-east-2",
            "AUTH_COGNITO_SCOPES": "zenithstays/reservations:read,zenithstays/reservations:write",
@@ -420,7 +420,7 @@ To resolve certificate issues, add the following environment variables to your M
         "API_SPEC_URL": "https://api.zenithstays.com/openapi.json",
         "AUTH_TYPE": "cognito",
         "AUTH_COGNITO_CLIENT_ID": "your-client-id",
-        "AUTH_COGNITO_CLIENT_SECRET": "your-client-secret", # pragma: allowlist secret
+        "AUTH_COGNITO_CLIENT_SECRET": "your-client-secret",
         "AUTH_COGNITO_DOMAIN": "zenith-stays-dev",
         "AUTH_COGNITO_REGION": "us-east-2",
         "AUTH_COGNITO_SCOPES": "zenithstays/reservations:read,zenithstays/reservations:write",

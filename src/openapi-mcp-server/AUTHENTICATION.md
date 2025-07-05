@@ -100,7 +100,7 @@ python -m awslabs.openapi_mcp_server.server --auth-type cognito \
 # Environment variables
 export AUTH_TYPE=cognito
 export AUTH_COGNITO_CLIENT_ID="YOUR_CLIENT_ID"
-export AUTH_COGNITO_CLIENT_SECRET="YOUR_CLIENT_SECRET" # pragma: allowlist secret
+export AUTH_COGNITO_CLIENT_SECRET="YOUR_CLIENT_SECRET"
 export AUTH_COGNITO_DOMAIN="your-domain-prefix"
 export AUTH_COGNITO_REGION="us-east-2"
 export AUTH_COGNITO_SCOPES="scope1,scope2"  # Optional, comma-separated list of scopes
@@ -161,7 +161,7 @@ To use the client credentials flow, you need to provide:
 ```bash
 export AUTH_TYPE=cognito
 export AUTH_COGNITO_CLIENT_ID="your-client-id"
-export AUTH_COGNITO_CLIENT_SECRET="your-client-secret" # pragma: allowlist secret
+export AUTH_COGNITO_CLIENT_SECRET="your-client-secret"
 export AUTH_COGNITO_DOMAIN="your-domain-prefix"
 export AUTH_COGNITO_REGION="us-east-2"
 export AUTH_COGNITO_SCOPES="scope1 scope2"  # Optional

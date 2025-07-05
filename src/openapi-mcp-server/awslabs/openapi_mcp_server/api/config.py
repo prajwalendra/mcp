@@ -211,8 +211,6 @@ def load_config(args: Any = None) -> Config:
             config.auth_cognito_region = args.auth_cognito_region
 
     # Log final configuration details
-    logger.info(
-        f'Configuration loaded: API name={config.api_name}, transport={config.transport}'
-    )
+    logger.info(f'Configuration loaded: API name={config.api_name}, transport={config.transport}')
 
     return config
