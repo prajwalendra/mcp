@@ -20,8 +20,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Updated authentication examples for consistency
 - Added environment variables reference for authentication methods
 - Clarified authentication caching behavior and configuration
-
-### Changed
+- Security: Upgraded dependencies including FastMCP 2.0 compatibility
+- Security: Updated docker base image and removed unnecessary packages to eliminate critical and high vulnerabilities
+  - Removed perl packages and other unnecessary components
+  - Updated to latest Python 3.10 base image with security patches
+  - Fixed libxml2 vulnerability (CVE-2025-6021)
+  - Optimized Docker configuration for FastMCP 2.0 compatibility
 - Standardized command examples to use uvx consistently
 - Removed unused port configuration
 
