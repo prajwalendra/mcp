@@ -256,10 +256,12 @@ The OpenAPI MCP Server dynamically creates Model Context Protocol (MCP) tools an
 - Dynamic Tool Generation: Automatically creates MCP tools from OpenAPI endpoints
 - Intelligent Route Mapping: Maps GET operations with query parameters to TOOLS
 - Dynamic Prompt Generation: Creates helpful prompts based on API structure
+- Authentication Support: Works with multiple authentication methods (Basic, Bearer Token, API Key, OAuth 2.0/Cognito)
 - Transport Options: Supports stdio transport
 - Flexible Configuration via environment variables or command line arguments
-- Authentication Support: Works with multiple authentication methods (Basic, Bearer Token, API Key, Cognito)
-- AWS Best Practices: Implements AWS best practices for caching, resilience, and observability
+- FastMCP 2.0 Compatibility: Fully compatible with the latest FastMCP version
+- Security-First Design: Implements AWS best practices for caching, resilience, and observability
+- Docker Optimization: Secure Docker configuration with vulnerability remediation
 
 [Learn more about the AWS OpenAPI MCP Server](servers/openapi-mcp-server.md)
 
