@@ -8,7 +8,7 @@ This server dynamically creates Model Context Protocol (MCP) tools and resources
 
 ## Documentation
 
-- [Overview](#overview) (this page)
+- [Overview](#overview)
 - [Authentication](openapi-mcp-server/authentication.md) - Authentication methods and configuration
 - [Deployment](openapi-mcp-server/deployment.md) - Deployment options and considerations
 - [Observability](openapi-mcp-server/observability.md) - Metrics, logging, and monitoring capabilities

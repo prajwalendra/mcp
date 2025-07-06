@@ -9,25 +9,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 - OAuth 2.0 and OpenID Connect support through Cognito authentication
-  - Client credentials grant flow for service-to-service authentication
-  - Support for custom scopes with optional scope parameter
-  - Automatic token refresh for improved reliability
-  - Comprehensive error handling with clear guidance
+- Client credentials grant flow for service-to-service authentication
+- Cline Marketplace integration support
 
-### Improved
-- Enhanced documentation structure and readability
-- Added Cline Marketplace integration instructions
-- Updated authentication examples for consistency
-- Added environment variables reference for authentication methods
-- Clarified authentication caching behavior and configuration
-- Security: Upgraded dependencies including FastMCP 2.0 compatibility
-- Security: Updated docker base image and removed unnecessary packages to eliminate critical and high vulnerabilities
-  - Removed perl packages and other unnecessary components
-  - Updated to latest Python 3.10 base image with security patches
-  - Fixed libxml2 vulnerability (CVE-2025-6021)
-  - Optimized Docker configuration for FastMCP 2.0 compatibility
-- Standardized command examples to use uvx consistently
-- Removed unused port configuration
+### Changed
+- Migrated from FastMCP 1.0 to 2.0
+- Updated core dependencies to latest versions
+- Enhanced documentation structure and authentication examples
+- Migrated Docker base image to Python 3.13.5-alpine for better security and performance
+- Optimized Docker build process reducing image size to 224MB
+
+### Security
+- Removed unnecessary packages from Docker image
+- Implemented non-root user execution in containers
+- Updated base image with latest security patches
 
 ## [0.1.0] - 2025-05-15
 
@@ -36,32 +31,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Support for OpenAPI specifications in JSON and YAML formats
 - Dynamic generation of MCP tools from OpenAPI endpoints
 - Intelligent route mapping for GET operations with query parameters
-  - Maps GET operations with query parameters to TOOLS instead of RESOURCES
-  - Makes API operations with query parameters easier for LLMs to understand and use
-  - Improves usability of search and filtering endpoints
-  - Configurable via the route_patch module
 - Authentication support for Basic, Bearer Token, and API Key methods
 - Command line arguments and environment variable configuration
 - Support for SSE and stdio transports
 - Dynamic prompt generation based on API structure
-  - Operation-specific prompts for each API endpoint
-  - Comprehensive API documentation prompts
-  - Prompt generation with Prompt.from_function method for FastMCP compatibility
 - Centralized configuration system for all server settings
 - Metrics collection and monitoring capabilities
-  - In-memory metrics provider
-  - Prometheus integration (optional)
-  - API call tracking and performance metrics
 - Caching system with multiple backend options
 - HTTP client with resilience features and retry logic
 - Error handling and logging throughout the application
 - Graceful shutdown mechanism for clean server termination
-  - Proper handling of SIGINT and SIGTERM signals
-  - Metrics logging during shutdown
-  - Integration with uvicorn's graceful shutdown process
 - Docker configuration with explicit API parameters
-- Comprehensive test suite with high code coverage (100% for route_patch.py)
-- Detailed documentation:
-  - README with installation and usage instructions
-  - Deployment guide with AWS service integration
-  - AWS best practices implementation
+- Comprehensive test suite with high code coverage
+- Detailed documentation and deployment guides
