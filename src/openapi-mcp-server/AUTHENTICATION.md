@@ -2,6 +2,17 @@
 
 [← Back to main README](README.md)
 
+## Mandatory Arguments
+
+**IMPORTANT**: Regardless of the authentication method used, the following arguments are always required:
+
+- `--api-url`: The base URL of the API (e.g., `https://api.example.com`)
+- One of the following:
+  - `--spec-url`: The URL to the OpenAPI specification (e.g., `https://api.example.com/openapi.json`)
+  - `--spec-path`: Path to a local OpenAPI specification file (e.g., `./openapi.json`)
+
+These arguments must be provided even when using environment variables for authentication settings.
+
 ## Supported Authentication Methods
 
 The OpenAPI MCP Server supports five authentication methods:
@@ -29,46 +40,46 @@ Cognito authentication supports two different flows:
 
 ```bash
 # Command line
-uvx awslabs.openapi-mcp-server --auth-type bearer --auth-token "YOUR_TOKEN" --api-url "https://api.example.com"
+python -m awslabs.openapi_mcp_server.server --auth-type bearer --auth-token "YOUR_TOKEN" --api-url "https://api.example.com"
 
 # Environment variables
 export AUTH_TYPE=bearer
 export AUTH_TOKEN="YOUR_TOKEN"
-uvx awslabs.openapi-mcp-server
+python -m awslabs.openapi_mcp_server.server
 ```
 
 ### Basic Authentication
 
 ```bash
 # Command line
-uvx awslabs.openapi-mcp-server --auth-type basic --auth-username "user" --auth-password "pass" --api-url "https://api.example.com"
+python -m awslabs.openapi_mcp_server.server --auth-type basic --auth-username "user" --auth-password "pass" --api-url "https://api.example.com"
 
 # Environment variables
 export AUTH_TYPE=basic
 export AUTH_USERNAME="user"
 export AUTH_PASSWORD="pass"
-uvx awslabs.openapi-mcp-server
+python -m awslabs.openapi_mcp_server.server
 ```
 
 ### API Key Authentication
 
 ```bash
 # Command line
-uvx awslabs.openapi-mcp-server --auth-type api_key --auth-api-key "your-key" --auth-api-key-name "X-API-Key" --auth-api-key-in "header"
+python -m awslabs.openapi_mcp_server.server --auth-type api_key --auth-api-key "your-key" --auth-api-key-name "X-API-Key" --auth-api-key-in "header"
 
 # Environment variables
 export AUTH_TYPE=api_key
 export AUTH_API_KEY="your-key"
 export AUTH_API_KEY_NAME="X-API-Key"
 export AUTH_API_KEY_IN="header"  # Options: header, query, cookie
-uvx awslabs.openapi-mcp-server
+python -m awslabs.openapi_mcp_server.server
 ```
 
 ### Cognito Authentication - Password Flow
 
 ```bash
 # Command line
-uvx awslabs.openapi-mcp-server --auth-type cognito \
+python -m awslabs.openapi_mcp_server.server --auth-type cognito \
   --auth-cognito-client-id "YOUR_CLIENT_ID" \
   --auth-cognito-username "username" \
   --auth-cognito-password "password" \
@@ -83,14 +94,14 @@ export AUTH_COGNITO_USERNAME="username"
 export AUTH_COGNITO_PASSWORD="password" # Can also be set in system environment
 export AUTH_COGNITO_USER_POOL_ID="OPTIONAL_POOL_ID"
 export AUTH_COGNITO_REGION="us-east-1"
-uvx awslabs.openapi-mcp-server
+python -m awslabs.openapi_mcp_server.server
 ```
 
 ### Cognito Authentication - OAuth 2.0 Client Credentials Flow
 
 ```bash
 # Command line
-uvx awslabs.openapi-mcp-server --auth-type cognito \
+python -m awslabs.openapi_mcp_server.server --auth-type cognito \
   --auth-cognito-client-id "YOUR_CLIENT_ID" \
   --auth-cognito-client-secret "YOUR_CLIENT_SECRET" \
   --auth-cognito-domain "your-domain-prefix" \
@@ -105,7 +116,7 @@ export AUTH_COGNITO_CLIENT_SECRET="YOUR_CLIENT_SECRET"
 export AUTH_COGNITO_DOMAIN="your-domain-prefix"
 export AUTH_COGNITO_REGION="us-east-2"
 export AUTH_COGNITO_SCOPES="scope1 scope2"  # Optional, space-separated list of scopes
-uvx awslabs.openapi-mcp-server
+python -m awslabs.openapi_mcp_server.server
 ```
 
 ## Important Notes
@@ -166,7 +177,7 @@ export AUTH_COGNITO_CLIENT_SECRET="your-client-secret"
 export AUTH_COGNITO_DOMAIN="your-domain-prefix"
 export AUTH_COGNITO_REGION="us-east-2"
 export AUTH_COGNITO_SCOPES="scope1 scope2"  # Optional
-uvx awslabs.openapi-mcp-server
+python -m awslabs.openapi_mcp_server.server
 ```
 
 ### OpenID Connect Support
@@ -204,7 +215,7 @@ You can configure the cache TTL (Time-To-Live) for authentication data:
 
 ```bash
 # Set authentication cache TTL to 1 hour (3600 seconds)
-uvx awslabs.openapi-mcp-server --auth-type bearer --auth-token "YOUR_TOKEN" --auth-token-ttl 3600
+python -m awslabs.openapi_mcp_server.server --auth-type bearer --auth-token "YOUR_TOKEN" --auth-token-ttl 3600
 ```
 
 Note: This setting controls how long the server caches authentication headers locally before regenerating them. It does not affect the actual expiration time of the token itself, which is determined by the authentication server that issued the token.
@@ -234,7 +245,7 @@ To verify your authentication configuration is working correctly:
 
 1. Start the server with debug logging enabled:
    ```bash
-   uvx awslabs.openapi-mcp-server --auth-type your_auth_type [your auth options] --log-level DEBUG
+   python -m awslabs.openapi_mcp_server.server --auth-type your_auth_type [your auth options] --log-level DEBUG
    ```
 
 2. Check the logs for successful authentication messages
@@ -279,7 +290,7 @@ DEBUG | awslabs.openapi_mcp_server.auth.cognito_auth:__init__:50 - Cognito auth 
 To enable these debug logs, run the server with `--log-level DEBUG`:
 
 ```bash
-uvx awslabs.openapi-mcp-server --auth-type cognito --log-level DEBUG [other options]
+python -m awslabs.openapi_mcp_server.server --auth-type cognito --log-level DEBUG [other options]
 ```
 
 Common Cognito authentication issues:

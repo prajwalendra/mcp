@@ -105,8 +105,8 @@ Add to `~/.aws/amazonq/mcp.json`:
 {
   "mcpServers": {
     "petstore-mcp-server": {
-      "command": "uvx",
-      "args": ["awslabs.openapi-mcp-server@latest"],
+      "command": "python",
+      "args": ["-m", "awslabs.openapi_mcp_server.server"],
       "env": {
         "API_NAME": "petstore",
         "API_BASE_URL": "https://petstore3.swagger.io/api/v3",
@@ -235,11 +235,11 @@ The OpenAPI MCP Server includes comprehensive documentation to help you get star
 
 ### Local Development
 
-For local development and testing, you can use the `uvx` command with the `--refresh` and `--from` options:
+For local development and testing, you can use Python's module execution:
 
 ```bash
 # Run the server from the local directory with the Petstore API
-uvx --refresh --from . awslabs.openapi-mcp-server --api-url https://petstore3.swagger.io/api/v3 --spec-url https://petstore3.swagger.io/api/v3/openapi.json --log-level DEBUG
+python -m awslabs.openapi_mcp_server.server --api-url https://petstore3.swagger.io/api/v3 --spec-url https://petstore3.swagger.io/api/v3/openapi.json --log-level DEBUG
 ```
 
 ### Running Tests
