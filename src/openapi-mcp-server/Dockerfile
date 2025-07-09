@@ -20,12 +20,25 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     PIP_NO_CACHE_DIR=1 \
     PIP_DISABLE_PIP_VERSION_CHECK=1
 
+# Install build dependencies using virtual package for easy cleanup
+RUN apk update && \
+    apk add --no-cache --virtual .build-deps \
+    build-base \
+    gcc \
+    musl-dev \
+    libffi-dev \
+    openssl-dev \
+    cargo
+
 WORKDIR /app
 
 # Copy and install in single layer for better caching
 COPY pyproject.toml uv.lock README.md LICENSE NOTICE ./
 COPY awslabs ./awslabs
-RUN pip install --no-cache-dir --target /opt/venv .
+RUN pip install --no-cache-dir --target /opt/venv . && \
+    # Remove unnecessary files to reduce image size
+    find /opt/venv -name '*.pyc' -delete && \
+    find /opt/venv -name '__pycache__' -delete
 
 # Stage 2: Runtime image
 FROM public.ecr.aws/docker/library/python:3.13.5-alpine3.21
@@ -36,7 +49,7 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     PATH="/opt/venv/bin:$PATH" \
     PYTHONWARNINGS="ignore"
 
-# Install dependencies and create user in single layer
+# Install runtime dependencies and create user in single layer
 RUN apk update && \
     apk add --no-cache ca-certificates && \
     update-ca-certificates && \
