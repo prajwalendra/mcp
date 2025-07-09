@@ -12,65 +12,43 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# Stage 1: Build dependencies using Python 3.13.5-alpine3.21
+# Stage 1: Build dependencies
 FROM public.ecr.aws/docker/library/python:3.13.5-alpine3.21 AS builder
 
-# Set environment variables for better Python behavior
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     PIP_NO_CACHE_DIR=1 \
     PIP_DISABLE_PIP_VERSION_CHECK=1
 
-# Install build dependencies in a single layer with virtual package for easy cleanup
-RUN apk add --no-cache --virtual .build-deps \
-    build-base \
-    gcc \
-    musl-dev \
-    libffi-dev \
-    openssl-dev \
-    cargo \
-    && pip install --no-cache-dir --upgrade pip setuptools>=78.1.1 wheel
-
-# Create app directory
 WORKDIR /app
 
-# Copy files needed for package metadata and installation
-COPY pyproject.toml README.md LICENSE NOTICE ./
+# Copy and install in single layer for better caching
+COPY pyproject.toml uv.lock README.md LICENSE NOTICE ./
 COPY awslabs ./awslabs
-
-# Install dependencies to a specific target directory for cleaner copying
 RUN pip install --no-cache-dir --target /opt/venv .
 
-# Stage 2: Create minimal runtime image
+# Stage 2: Runtime image
 FROM public.ecr.aws/docker/library/python:3.13.5-alpine3.21
 
-# Set environment variables for better Python and logging behavior
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
-    PIP_NO_CACHE_DIR=1 \
     PYTHONPATH=/opt/venv \
     PATH="/opt/venv/bin:$PATH" \
-    # Suppress Python warnings
     PYTHONWARNINGS="ignore"
 
-# Install only essential runtime dependencies
-RUN apk add --no-cache \
-    ca-certificates \
-    && update-ca-certificates
-
-# Create non-root user for security
-RUN addgroup -S app && \
+# Install dependencies and create user in single layer
+RUN apk update && \
+    apk add --no-cache ca-certificates && \
+    update-ca-certificates && \
+    addgroup -S app && \
     adduser -S app -G app -h /app
 
-# Copy only what's needed from the builder stage
+# Copy application files
 COPY --from=builder --chown=app:app /opt/venv /opt/venv
 COPY --from=builder --chown=app:app /app/awslabs /app/awslabs
-
-# Get healthcheck script and entrypoint script
 COPY --chown=app:app ./docker-healthcheck.sh /usr/local/bin/docker-healthcheck.sh
 RUN chmod +x /usr/local/bin/docker-healthcheck.sh
 
-# Run as non-root
 USER app
 WORKDIR /app
 
