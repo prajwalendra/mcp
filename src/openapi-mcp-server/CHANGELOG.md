@@ -16,12 +16,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Migrated from FastMCP 1.0 to 2.0
 - Updated core dependencies to latest versions
 - Enhanced documentation structure and authentication examples
-- Migrated Docker base image to Python 3.13.5-alpine for better security and performance
-- Optimized Docker build process reducing image size to 224MB
 
 ### Security
-- Removed unnecessary packages from Docker image
-- Implemented non-root user execution in containers
 - Updated base image with latest security patches
 
 ## [0.1.0] - 2025-05-15

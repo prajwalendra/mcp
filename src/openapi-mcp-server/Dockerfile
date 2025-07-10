@@ -12,62 +12,66 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# Stage 1: Build dependencies
-FROM public.ecr.aws/docker/library/python:3.13.5-alpine3.21 AS builder
+FROM public.ecr.aws/sam/build-python3.10@sha256:d821662474d65f3cf2fc97dba2fa807a3adb580d02895fc4545527812550ea65 AS uv
 
-ENV PYTHONDONTWRITEBYTECODE=1 \
-    PYTHONUNBUFFERED=1 \
-    PIP_NO_CACHE_DIR=1 \
-    PIP_DISABLE_PIP_VERSION_CHECK=1
-
-# Install build dependencies using virtual package for easy cleanup
-RUN apk update && \
-    apk add --no-cache --virtual .build-deps \
-    build-base \
-    gcc \
-    musl-dev \
-    libffi-dev \
-    openssl-dev \
-    cargo
-
+# Install the project into `/app`
 WORKDIR /app
 
-# Copy and install in single layer for better caching
-COPY pyproject.toml uv.lock README.md LICENSE NOTICE ./
-COPY awslabs ./awslabs
-RUN pip install --no-cache-dir --target /opt/venv . && \
-    # Remove unnecessary files to reduce image size
-    find /opt/venv -name '*.pyc' -delete && \
-    find /opt/venv -name '__pycache__' -delete
+# Enable bytecode compilation
+ENV UV_COMPILE_BYTECODE=1
 
-# Stage 2: Runtime image
-FROM public.ecr.aws/docker/library/python:3.13.5-alpine3.21
+# Copy from the cache instead of linking since it's a mounted volume
+ENV UV_LINK_MODE=copy
 
-ENV PYTHONDONTWRITEBYTECODE=1 \
-    PYTHONUNBUFFERED=1 \
-    PYTHONPATH=/opt/venv \
-    PATH="/opt/venv/bin:$PATH" \
-    PYTHONWARNINGS="ignore"
+# Prefer the system python
+ENV UV_PYTHON_PREFERENCE=only-system
 
-# Install runtime dependencies and create user in single layer
-RUN apk update && \
-    apk add --no-cache ca-certificates && \
-    update-ca-certificates && \
-    addgroup -S app && \
-    adduser -S app -G app -h /app
+# Run without updating the uv.lock file like running with `--frozen`
+ENV UV_FROZEN=true
 
-# Copy application files
-COPY --from=builder --chown=app:app /opt/venv /opt/venv
-COPY --from=builder --chown=app:app /app/awslabs /app/awslabs
-COPY --chown=app:app ./docker-healthcheck.sh /usr/local/bin/docker-healthcheck.sh
+# Copy the required files first
+COPY pyproject.toml uv.lock uv-requirements.txt ./
+
+# Install the project's dependencies using the lockfile and settings
+RUN --mount=type=cache,target=/root/.cache/uv \
+    pip install --require-hashes --requirement uv-requirements.txt && \
+    uv sync --frozen --no-install-project --no-dev --no-editable
+
+# Then, add the rest of the project source code and install it
+# Installing separately from its dependencies allows optimal layer caching
+COPY . /app
+RUN --mount=type=cache,target=/root/.cache/uv \
+    uv sync --frozen --no-dev --no-editable
+
+# Make the directory just in case it doesn't exist
+RUN mkdir -p /root/.local
+
+FROM public.ecr.aws/sam/build-python3.10@sha256:d821662474d65f3cf2fc97dba2fa807a3adb580d02895fc4545527812550ea65
+
+# Place executables in the environment at the front of the path and include other binaries
+ENV PATH="/app/.venv/bin:$PATH:/usr/sbin"
+
+# Install lsof for the healthcheck
+# Install other tools as needed for the MCP server
+# Add non-root user and ability to change directory into /root
+RUN yum update -y && \
+    yum install -y lsof && \
+    yum clean all -y && \
+    rm -rf /var/cache/yum && \
+    groupadd --force --system app && \
+    useradd app -g app -d /app && \
+    chmod o+x /root
+
+# Get the project from the uv layer
+COPY --from=uv --chown=app:app /root/.local /root/.local
+COPY --from=uv --chown=app:app /app/.venv /app/.venv
+
+# Get healthcheck script
+COPY ./docker-healthcheck.sh /usr/local/bin/docker-healthcheck.sh
 RUN chmod +x /usr/local/bin/docker-healthcheck.sh
 
+# Run as non-root
 USER app
-WORKDIR /app
 
-# Optimize healthcheck intervals for better performance
-HEALTHCHECK --interval=60s --timeout=10s --start-period=10s --retries=3 \
-    CMD ["docker-healthcheck.sh"]
-
-# Use exec form for better signal handling
+HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 CMD [ "docker-healthcheck.sh" ]
 ENTRYPOINT ["python", "-m", "awslabs.openapi_mcp_server.server"]
